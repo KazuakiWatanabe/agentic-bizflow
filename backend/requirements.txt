@@ -1,1 +1,4 @@
+fastapi
 pydantic>=2
+python-dotenv
+uvicorn[standard]
