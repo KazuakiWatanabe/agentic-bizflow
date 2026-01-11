@@ -1,0 +1,87 @@
+# =========================================================
+# OS / Editor
+# =========================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================================================
+# Python
+# =========================================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# =========================================================
+# Node / Frontend (Vite / React)
+# =========================================================
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.vite/
+
+# =========================================================
+# Environment files / secrets
+# =========================================================
+.env
+.env.*
+!.env.example
+
+# =========================================================
+# Logs
+# =========================================================
+*.log
+
+# =========================================================
+# Docker
+# =========================================================
+*.pid
+*.seed
+
+# =========================================================
+# Diagrams / Exports (optional)
+# keep source files if needed, but ignore exports if you want
+# =========================================================
+# Uncomment if you don't want to commit generated images
+# docs/diagrams/*.png
+# docs/diagrams/*.jpg
+# docs/diagrams/*.svg
+
+# draw.io auto backups (if any)
+*.drawio.bak
+
+# =========================================================
+# Windows PowerShell
+# =========================================================
+*.tmp
