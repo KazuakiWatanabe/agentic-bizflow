@@ -161,10 +161,10 @@ AIエージェント実装・レビュー・Git運用 共通ルール（日本�
 ## 4. Orchestrator のルール
 
 ### 実行順序（固定）
-1. ReaderAgent
-2. PlannerAgent
-3. ValidatorAgent
-4. GeneratorAgent
+1. ReaderAgent  
+2. PlannerAgent  
+3. ValidatorAgent  
+4. GeneratorAgent  
 
 ### 制御ルール
 - 最大リトライ回数を設定（デフォルト：2回）
