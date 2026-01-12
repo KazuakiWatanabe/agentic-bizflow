@@ -47,8 +47,6 @@
 - 出力は Pydantic スキーマで決定論的に検証（schema enforced）
 - Cloud Run 上で API として動作（後続フェーズで実装）
 
-
-
 - **ReaderAgent**  
   業務文章を読み取り、登場人物・操作・条件・例外を抽出
 - **PlannerAgent**  
@@ -81,9 +79,6 @@ agentic-bizflow/
 │ └─ test_orchestrator.py
 └─ frontend/ # デモ用UI（後続フェーズ）
 
-yaml
-コードをコピーする
-
 ---
 
 ## 🌱 ブランチ戦略
@@ -96,9 +91,6 @@ main
 ├─ backend-mvp
 ├─ frontend-mvp
 └─ polish-for-submission
-
-yaml
-コードをコピーする
 
 ### 各ブランチの役割
 
@@ -124,7 +116,41 @@ yaml
 
 ---
 
-## 🧑‍💻 開発環境
+## 🚀 Cloud Run デプロイ / API 実行例
+
+本プロジェクトの backend-mvp は、  
+**FastAPI + Docker 構成のまま Cloud Run 上で実行可能**です。
+
+### Cloud Run デプロイ例（最小）
+
+```sh
+gcloud run deploy agentic-bizflow-backend \
+  --source=./backend \
+  --region=asia-northeast1 \
+  --allow-unauthenticated
+※ Vertex AI（Gemini）を利用する場合は、
+Cloud Run のサービスアカウントに roles/aiplatform.user を付与してください。
+
+
+### API 実行例（curl）
+
+sh
+コードをコピーする
+curl -X POST https://<cloud-run-url>/api/convert \
+  -H "Content-Type: application/json" \
+  -d '{"text":"経費を申請し、承認されたら精算する"}'
+レスポンス例（抜粋）：
+
+json
+コードをコピーする
+{
+  "definition": { ... },
+  "agent_logs": [ ... ],
+  "meta": { ... }
+}
+
+
+##  🧑‍💻 開発環境
 
 - Python 3.11+
 - Pydantic v2
@@ -132,44 +158,31 @@ yaml
 - black / isort / flake8（PEP8準拠）
 - Node.js 20+（frontend）
 
----
+## 🚀 テスト
+
+sh
+コードをコピーする
+cd backend && pytest -q
+
 
 ## 📜 コーディング規約
 
-- Python は **PEP8 準拠**
+- Python は PEP8 準拠
 - black / isort 互換
 - import の暗黙利用禁止
 - Agent の責務混在禁止
 
-詳細は [`AGENTS.md`](./AGENTS.md) を必ず参照してください。
-
----
-
-## 🚀 今後の予定
-
-1. agentic-core ブランチで最小実装完成
-2. main へマージ
-3. backend-mvp で FastAPI + Cloud Run 対応
-4. frontend-mvp でデモUI作成
-5. polish-for-submission で提出準備
-
----
 
 ## 📌 注意事項
 
-- 本リポジトリには **秘密情報・APIキーは含めません**
-- `.env` は使用せず `.env.example` のみを配置します
+- 本リポジトリには 秘密情報・APIキーは含めません
+- .env は使用せず .env.example のみを配置します
 - 無料枠（Google Cloud Always Free）前提で設計しています
-
----
 
 ## ✨ Why Agentic BizFlow
 
-このプロジェクトは  
-**「AIにコードを書かせる」ためのものではありません。**
-
+- このプロジェクトは「AIにコードを書かせる」ためのものではありません。
 - 曖昧な業務を構造化する
 - AIの思考を外に出す
 - 人がレビュー可能な形にする
-
-そのための **Agentic AI 実装例**です。
+- そのための Agentic AI 実装例です。
