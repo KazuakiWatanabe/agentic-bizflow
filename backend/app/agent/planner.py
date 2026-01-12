@@ -30,6 +30,22 @@ class PlannerAgent:
         Returns:
             tasks と roles を含む辞書
 
+        Variables:
+            retry_issues:
+                Validatorで検出された問題点の一覧（再試行時のみ）。
+            is_retry:
+                再試行フラグ。retry_issues の有無で判定する。
+            role_name:
+                タスクに割り当てるロール名。
+            trigger:
+                タスクの実行トリガー（初回は空）。
+            conditions:
+                ReaderAgent が抽出した条件一覧。
+            task:
+                生成したタスク定義の辞書。
+            role:
+                生成したロール定義の辞書。
+
         Raises:
             None
 

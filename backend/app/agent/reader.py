@@ -30,6 +30,10 @@ class ReaderAgent:
         Returns:
             抽出結果の辞書（entities/actions/conditions/exceptions/assumptions）
 
+        Variables:
+            cleaned:
+                入力文の前後空白を除去した文字列。
+
         Raises:
             None
 

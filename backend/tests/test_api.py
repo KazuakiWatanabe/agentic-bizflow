@@ -22,6 +22,12 @@ def test_health_ok() -> None:
     Returns:
         None
 
+    Variables:
+        client:
+            FastAPIのテストクライアント。
+        response:
+            /health のレスポンス。
+
     Raises:
         AssertionError: レスポンスが期待値と異なる場合に発生
     """
@@ -40,6 +46,14 @@ def test_convert_returns_definition() -> None:
 
     Returns:
         None
+
+    Variables:
+        client:
+            FastAPIのテストクライアント。
+        response:
+            /api/convert のレスポンス。
+        payload:
+            受信したJSONボディ。
 
     Raises:
         AssertionError: レスポンスが期待値と異なる場合に発生

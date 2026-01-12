@@ -23,6 +23,14 @@ def test_business_definition_schema_forbids_extra() -> None:
     Returns:
         None
 
+    Variables:
+        task:
+            テスト用のタスク定義。
+        role:
+            テスト用のロール定義。
+        definition:
+            正常系の業務定義。
+
     Raises:
         AssertionError: スキーマが想定と異なる場合に発生
 

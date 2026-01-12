@@ -72,6 +72,24 @@ class Orchestrator:
         Returns:
             (definition, agent_logs, meta)
 
+        Variables:
+            agent_logs:
+                各Agentの要約ログ一覧。
+            reader_out:
+                ReaderAgentの抽出結果。
+            retries:
+                Validator失敗時の再試行回数。
+            planner_out:
+                PlannerAgentの出力辞書。
+            validator_out:
+                ValidatorAgentの出力辞書。
+            issues:
+                Validatorが検出した問題点一覧。
+            definition:
+                生成済みの業務定義。
+            meta:
+                retries と model を含むメタ情報。
+
         Raises:
             ValueError: リトライ上限後も issues が残る場合に発生
 
@@ -124,6 +142,12 @@ class Orchestrator:
         Returns:
             要約ログ辞書
 
+        Variables:
+            entities:
+                Readerで抽出した登場人物の件数。
+            actions:
+                Readerで抽出した操作の件数。
+
         Raises:
             None
         """
@@ -139,6 +163,12 @@ class Orchestrator:
 
         Returns:
             要約ログ辞書
+
+        Variables:
+            tasks:
+                Plannerで生成したタスク一覧。
+            roles:
+                Plannerで生成したロール一覧。
 
         Raises:
             None
@@ -158,6 +188,12 @@ class Orchestrator:
 
         Returns:
             要約ログ辞書
+
+        Variables:
+            issues:
+                Validatorが検出した問題点一覧。
+            summary:
+                issues の有無に応じた要約文字列。
 
         Raises:
             None
@@ -184,6 +220,10 @@ class Orchestrator:
 
         Returns:
             要約ログ辞書
+
+        Variables:
+            definition:
+                生成済みの業務定義。
 
         Raises:
             None

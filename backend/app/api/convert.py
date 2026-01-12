@@ -28,6 +28,12 @@ class ConvertRequest(BaseModel):
     主なメソッド: なし（データ保持のみ）
     制約: extra fields は受け付けない。
 
+    Variables:
+        text:
+            変換対象の業務文章。
+        context:
+            任意の補助情報（現在の実装では未使用）。
+
     Note:
         - context は任意で、現在の実装では処理に影響しない
     """
@@ -45,6 +51,14 @@ class ConvertResponse(BaseModel):
     主要な役割はレスポンス形式の固定化である。
     主なメソッド: なし（データ保持のみ）
     制約: extra fields は受け付けない。
+
+    Variables:
+        definition:
+            業務定義のdict表現。
+        agent_logs:
+            各Agentの要約ログ一覧。
+        meta:
+            retries などのメタ情報。
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -63,6 +77,20 @@ def convert(request: ConvertRequest) -> ConvertResponse:
 
     Returns:
         ConvertResponse: 業務定義と要約ログ、メタ情報
+
+    Variables:
+        text:
+            前後空白を除去した入力文字列。
+        orchestrator:
+            Agentic変換の実行器。
+        definition:
+            変換後の業務定義（Pydanticモデル）。
+        agent_logs:
+            各Agentの要約ログ一覧。
+        meta:
+            retries などのメタ情報。
+        definition_dict:
+            definition を JSON 返却用にdict化した値。
 
     Raises:
         HTTPException: 入力不備や検証失敗、内部エラー時に発生

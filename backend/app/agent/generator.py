@@ -41,6 +41,22 @@ class GeneratorAgent:
         Returns:
             BusinessDefinition: スキーマに準拠した業務定義
 
+        Variables:
+            title:
+                生成したタイトル文字列。
+            overview:
+                タイトルに基づく概要文。
+            roles:
+                生成したロール定義の一覧。
+            tasks:
+                生成したタスク定義の一覧。
+            assumptions:
+                Readerの前提条件一覧。
+            open_questions:
+                Validatorの未解決事項一覧。
+            definition_data:
+                BusinessDefinition 検証用の辞書。
+
         Raises:
             ValidationError: スキーマ検証に失敗した場合に発生
 
@@ -75,6 +91,12 @@ class GeneratorAgent:
         Returns:
             タイトル文字列
 
+        Variables:
+            cleaned:
+                入力文の前後空白を除去した文字列。
+            first_line:
+                入力文の先頭行。
+
         Raises:
             None
 
@@ -98,6 +120,12 @@ class GeneratorAgent:
 
         Returns:
             RoleDefinition のリスト
+
+        Variables:
+            roles_out:
+                Plannerが生成したロール一覧。
+            roles:
+                RoleDefinition に変換したロール一覧。
 
         Raises:
             None
@@ -133,6 +161,18 @@ class GeneratorAgent:
 
         Returns:
             TaskDefinition のリスト
+
+        Variables:
+            tasks_out:
+                Plannerが生成したタスク一覧。
+            default_role:
+                タスクに割り当てる既定ロール名。
+            conditions:
+                Readerが抽出した条件一覧。
+            default_trigger:
+                既定の実行トリガー。
+            tasks:
+                TaskDefinition に変換したタスク一覧。
 
         Raises:
             None
@@ -179,6 +219,10 @@ class GeneratorAgent:
         Returns:
             RoleDefinition
 
+        Variables:
+            responsibilities:
+                ロールの責務一覧（既定値込み）。
+
         Raises:
             None
 
@@ -207,6 +251,14 @@ class GeneratorAgent:
 
         Returns:
             TaskDefinition
+
+        Variables:
+            steps:
+                タスクの手順一覧（既定値込み）。
+            exception_handling:
+                例外時の対応一覧。
+            notifications:
+                通知内容の一覧。
 
         Raises:
             None

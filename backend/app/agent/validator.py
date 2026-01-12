@@ -30,6 +30,20 @@ class ValidatorAgent:
         Returns:
             issues と open_questions を含む辞書
 
+        Variables:
+            issues:
+                検出した問題点の一覧。
+            open_questions:
+                未解決事項の一覧。
+            tasks:
+                Plannerが生成したタスク一覧。
+            roles:
+                Plannerが生成したロール一覧。
+            task_id:
+                検証対象タスクの識別子。
+            steps:
+                タスクの手順一覧。
+
         Raises:
             None
 

@@ -21,6 +21,16 @@ def test_orchestrator_retries_and_returns_definition() -> None:
     Returns:
         None
 
+    Variables:
+        orchestrator:
+            テスト対象のOrchestrator。
+        definition:
+            生成された業務定義。
+        agent_logs:
+            Agentの要約ログ一覧。
+        meta:
+            retries などのメタ情報。
+
     Raises:
         AssertionError: 期待する結果が得られない場合に発生
 

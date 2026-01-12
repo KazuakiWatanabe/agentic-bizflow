@@ -5,6 +5,10 @@ FastAPIアプリケーションのエントリポイントを提供する。
 入出力: HTTPリクエストを受け取り、JSONレスポンスを返す。
 制約: Agenticコアは変更せず、ログは要約のみを扱う。
 
+Variables:
+    app:
+        ASGIアプリ本体。uvicorn から参照される。
+
 Note:
     - CORS_ALLOW_ORIGINS が未設定または "*" の場合は全許可とする
 """
@@ -30,6 +34,10 @@ def _parse_cors_origins(value: str) -> List[str]:
     Returns:
         許可オリジンのリスト
 
+    Variables:
+        cleaned:
+            環境変数の値を正規化した文字列。
+
     Raises:
         None
 
@@ -50,6 +58,12 @@ def create_app() -> FastAPI:
 
     Returns:
         FastAPIアプリケーション
+
+    Variables:
+        app:
+            FastAPIアプリ本体。
+        origins:
+            CORSで許可するオリジンのリスト。
 
     Raises:
         None
@@ -86,4 +100,5 @@ def health() -> str:
     return "ok"
 
 
+# ASGIアプリ本体。uvicornの起動対象となる。
 app = create_app()

@@ -20,6 +20,12 @@ class RoleDefinition(BaseModel):
     主なメソッド: なし（データ保持のみ）
     制約: スキーマ外のフィールドは受け付けない。
 
+    Variables:
+        name:
+            ロールの名称。
+        responsibilities:
+            ロールの責務一覧。
+
     Note:
         - extra fields は禁止する
     """
@@ -36,6 +42,22 @@ class TaskDefinition(BaseModel):
     主な属性: id, name, role, trigger, steps, exception_handling, notifications
     主なメソッド: なし（データ保持のみ）
     制約: スキーマ外のフィールドは受け付けない。
+
+    Variables:
+        id:
+            タスク識別子。
+        name:
+            タスク名。
+        role:
+            担当ロール名。
+        trigger:
+            実行トリガー。
+        steps:
+            実行手順の一覧。
+        exception_handling:
+            例外時の対応一覧。
+        notifications:
+            通知内容の一覧。
 
     Note:
         - extra fields は禁止する
@@ -58,6 +80,20 @@ class BusinessDefinition(BaseModel):
     主な属性: title, overview, tasks, roles, assumptions, open_questions
     主なメソッド: なし（データ保持のみ）
     制約: スキーマ外のフィールドは受け付けない。
+
+    Variables:
+        title:
+            業務定義のタイトル。
+        overview:
+            概要説明。
+        tasks:
+            タスク定義の一覧。
+        roles:
+            ロール定義の一覧。
+        assumptions:
+            前提条件の一覧。
+        open_questions:
+            未解決事項の一覧。
 
     Note:
         - extra fields は禁止する
