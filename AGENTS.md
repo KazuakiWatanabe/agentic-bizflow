@@ -88,6 +88,21 @@ if/else、retry、例外、環境変数分岐など **条件付きの挙動**が
 - 「retry は最大2回」
 - 「Generator は Validation 通過後のみ実行する」
 
+
+### 4.5 ⑤ 変数の意味を日本語で説明する（必須）
+
+関数内・クラス内で定義される 主要な変数 について、以下のいずれかの方法で 日本語による意味説明 を必ず記載する。
+
+対象となる変数例：
+- 業務上の意味を持つ変数（definition, issues, retries, agent_logs など）
+- 条件分岐や制御に影響する変数（flags, counters, status など）
+- 一時変数であっても文脈理解に重要なもの
+- 記載方法（いずれか必須）：
+- 変数定義直前のコメント
+- docstring 内の Variables: セクション
+
+未記載の場合、その実装は ** レビュー未通過（未完成）扱い ** とする。
+
 ---
 
 ## 5. コーディング規約
@@ -136,7 +151,7 @@ yaml
 ## 8. Python 実装サンプル（本ルール準拠例）
 
 以下は、本リポジトリで推奨する **docstringの書き方と実装の骨格**の例です。  
-（Google style / reST / NumPy style は自由だが、日本語で①〜④を満たすこと）
+（Google style / reST / NumPy style は自由だが、日本語で①〜⑤を満たすこと）
 
 ### 8.1 ファイルサマリー（①）＋条件Note（④）の例
 
@@ -188,7 +203,63 @@ def convert(self, text: str):
         - 再試行は最大2回まで
     """
 
-### 8.4 最小の Agentic パイプライン骨格（参考）
+
+### 8.4 関数説明（③）＋条件Note（④）＋変数説明（⑤）の例
+
+```python
+
+def convert(self, text: str):
+    """業務文章を業務定義に変換する。
+
+    Args:
+        text: 入力となる業務文章（自然文）
+
+    Returns:
+        definition: Pydanticスキーマに準拠した業務定義
+        agent_logs: 各ステップの要約ログ（短文）
+        meta: retries回数などのメタ情報
+
+    Variables:
+        retries:
+            Validator で失敗した場合に再試行した回数を表すカウンタ。
+            初回実行時は 0 から開始し、再試行のたびにインクリメントされる。
+
+        agent_logs:
+            Reader / Planner / Validator / Generator 各 Agent の
+            実行結果を要約したログの一覧。
+            デバッグ用途ではなく、人が処理の流れを追うための情報を保持する。
+
+        issues:
+            ValidatorAgent が検出した問題点の一覧。
+            空配列の場合のみ Validation 通過とみなされる。
+
+    Note:
+        - Validator が issues を返した場合のみ再試行する
+        - 再試行は最大2回まで
+    """
+    retries = 0  # Validator失敗時の再試行回数
+    agent_logs = []  # 各Agentの実行要約ログを格納する
+
+    reader_out = self._reader(text)
+
+    while True:
+        planner_out = self._planner(reader_out, retries=retries)
+        validator_out = self._validator(planner_out)
+
+        issues = validator_out.get("issues", [])  # 検出された問題点一覧
+
+        if not issues:
+            definition = self._generator(text, reader_out, planner_out, validator_out)
+            meta = {"retries": retries}
+            return definition, agent_logs, meta
+
+        if retries >= self.max_retries:
+            raise ValueError("再試行上限に達しました")
+
+        retries += 1
+
+
+### 8.5 最小の Agentic パイプライン骨格（参考）
 
 これは 構造の例です。実際の実装では backend/app/agent/ 配下の責務分離を維持してください。
 
