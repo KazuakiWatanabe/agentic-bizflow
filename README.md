@@ -41,7 +41,8 @@
 
 ![Agentic BizFlow Architecture](./docs/diagrams/agentic-architecture.png)
 
-**ポイント**
+### ポイント
+
 - Orchestrator が状態遷移を管理し、Validation に失敗したら Retry（最大2回）
 - Reader → Planner → Validator → Generator の責務分離
 - 出力は Pydantic スキーマで決定論的に検証（schema enforced）
@@ -75,8 +76,8 @@ agentic-bizflow/
 │ │ ├─ validator.py
 │ │ └─ generator.py
 │ └─ tests/
-│ ├─ test_schema.py
-│ └─ test_orchestrator.py
+│   ├─ test_schema.py
+│   └─ test_orchestrator.py
 └─ frontend/ # デモ用UI（後続フェーズ）
 
 ---
@@ -95,7 +96,7 @@ main
 ### 各ブランチの役割
 
 | ブランチ | 役割 |
-|--------|------|
+| -------- | ------ |
 | main | 常に提出・デモ可能な状態 |
 | docs/architecture | 設計思想・Agent定義（コードなし） |
 | agentic-core | Agent / Orchestrator の中核実装 |
