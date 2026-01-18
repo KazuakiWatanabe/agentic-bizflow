@@ -1,0 +1,4 @@
+window.__CONFIG__ = {
+  LIFF_ID: "${LIFF_ID}",
+  BACKEND_BASE_URL: "${BACKEND_BASE_URL}",
+};

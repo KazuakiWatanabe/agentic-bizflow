@@ -12,7 +12,7 @@ Note:
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from app.agent.orchestrator import Orchestrator
@@ -59,6 +59,7 @@ class ConvertResponse(BaseModel):
             各Agentの要約ログ一覧。
         meta:
             retries などのメタ情報。
+            token_present はAuthorizationヘッダからIDトークンの有無を示す。
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -68,12 +69,45 @@ class ConvertResponse(BaseModel):
     meta: Dict[str, Any]
 
 
+def _is_bearer_token_present(authorization: Optional[str]) -> bool:
+    """AuthorizationヘッダにBearerトークンが含まれるかを判定する。
+
+    Args:
+        authorization: Authorization ヘッダの値
+
+    Returns:
+        Bearer トークンが存在する場合は True
+
+    Variables:
+        normalized:
+            Authorization ヘッダの前後空白を除去した文字列。
+        token:
+            "Bearer " 以降のトークン文字列。
+
+    Note:
+        - Authorization が空または Bearer 形式でない場合は False を返す
+    """
+    if not authorization:
+        return False
+    normalized = authorization.strip()
+    if not normalized:
+        return False
+    if not normalized.lower().startswith("bearer "):
+        return False
+    token = normalized[7:].strip()
+    return bool(token)
+
+
 @router.post("/convert", response_model=ConvertResponse)
-def convert(request: ConvertRequest) -> ConvertResponse:
+def convert(
+    request: ConvertRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> ConvertResponse:
     """業務文章を業務定義へ変換する。
 
     Args:
         request: 変換対象のテキストと任意コンテキスト
+        authorization: Authorization ヘッダ（Bearer トークン想定）
 
     Returns:
         ConvertResponse: 業務定義と要約ログ、メタ情報
@@ -81,6 +115,8 @@ def convert(request: ConvertRequest) -> ConvertResponse:
     Variables:
         text:
             前後空白を除去した入力文字列。
+        token_present:
+            Authorization ヘッダから判定したIDトークンの有無。
         orchestrator:
             Agentic変換の実行器。
         definition:
@@ -99,6 +135,7 @@ def convert(request: ConvertRequest) -> ConvertResponse:
         - text が空の場合は 400 を返す
         - ValueError は 422 に変換する
         - それ以外の例外は 500 を返す
+        - Bearer トークンがある場合のみ meta に token_present を追加する
     """
     text = (request.text or "").strip()
     if not text:
@@ -111,6 +148,11 @@ def convert(request: ConvertRequest) -> ConvertResponse:
         raise HTTPException(status_code=422, detail="validation failed") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail="internal server error") from exc
+
+    token_present = _is_bearer_token_present(authorization)
+    if token_present:
+        meta = dict(meta)
+        meta["token_present"] = True
 
     definition_dict = definition.model_dump()
     return ConvertResponse(

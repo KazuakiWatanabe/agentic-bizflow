@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Agentic BizFlow LIFFデモ</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Space+Grotesk:wght@400;600;700&display=swap"
+    />
+    <script src="config.js"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+      :root {
+        --bg-1: #f2efe6;
+        --bg-2: #e0efe6;
+        --ink: #1b1b1f;
+        --muted: #5e5e66;
+        --accent: #1f7a6d;
+        --accent-2: #f28f3b;
+        --panel: rgba(255, 255, 255, 0.9);
+        --shadow: 0 24px 60px rgba(18, 24, 38, 0.14);
+        --radius: 20px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at top, #ffffff 0%, var(--bg-1) 55%)
+          fixed;
+        min-height: 100vh;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        z-index: -1;
+        filter: blur(0px);
+        opacity: 0.3;
+      }
+
+      body::before {
+        background: radial-gradient(circle, #a3e4d7 0%, transparent 70%);
+        top: -120px;
+        left: -80px;
+      }
+
+      body::after {
+        background: radial-gradient(circle, #ffd6a5 0%, transparent 70%);
+        bottom: -140px;
+        right: -120px;
+      }
+
+      .shell {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 36px 24px 56px;
+        display: grid;
+        gap: 24px;
+      }
+
+      .hero {
+        background: linear-gradient(135deg, #fefcf7 0%, #f4fbf8 100%);
+        border-radius: var(--radius);
+        padding: 32px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(31, 122, 109, 0.12);
+        animation: float-up 0.6s ease-out;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: rgba(31, 122, 109, 0.12);
+        color: var(--accent);
+        border-radius: 999px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 12px 0 8px;
+        font-family: "Fraunces", "Georgia", serif;
+        font-size: clamp(28px, 4vw, 40px);
+      }
+
+      p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .status-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+
+      .status-card {
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 14px;
+        border: 1px solid rgba(30, 30, 30, 0.08);
+      }
+
+      .status-label {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .status-value {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: var(--radius);
+        padding: 28px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(18, 24, 38, 0.08);
+        animation: float-up 0.7s ease-out;
+        animation-delay: 0.05s;
+        animation-fill-mode: both;
+      }
+
+      .panel-head {
+        margin-bottom: 16px;
+      }
+
+      .panel h2 {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+
+      .field {
+        display: block;
+      }
+
+      .field-label {
+        display: block;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 160px;
+        resize: vertical;
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(31, 122, 109, 0.2);
+        background: #fbfcfb;
+        font-family: inherit;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-top: 16px;
+      }
+
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 12px 20px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: white;
+        box-shadow: 0 12px 30px rgba(31, 122, 109, 0.25);
+      }
+
+      button.ghost {
+        background: rgba(31, 122, 109, 0.12);
+        color: var(--accent);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      .request-state {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .error {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(242, 143, 59, 0.18);
+        color: #7a2f07;
+        font-size: 13px;
+        display: none;
+      }
+
+      .output-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .output-card {
+        padding: 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(30, 30, 30, 0.08);
+      }
+
+      .output-card h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+          monospace;
+        font-size: 13px;
+        color: #1c1f24;
+      }
+
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 12px;
+      }
+
+      @keyframes float-up {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (min-width: 960px) {
+        .shell {
+          grid-template-columns: 1.05fr 0.95fr;
+        }
+
+        .hero {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .hero,
+        .panel {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="badge">LIFF最小構成</div>
+        <h1>Agentic BizFlow</h1>
+        <p>
+          業務文章を構造化されたJSONへ変換します。Cloud Run配信を想定した
+          LIFF最小デモです。
+        </p>
+        <div class="status-grid">
+          <div class="status-card">
+            <span class="status-label">設定</span>
+            <span class="status-value" id="config-status">確認中</span>
+          </div>
+          <div class="status-card">
+            <span class="status-label">LINE内</span>
+            <span class="status-value" id="status-in-client">不明</span>
+          </div>
+          <div class="status-card">
+            <span class="status-label">OS</span>
+            <span class="status-value" id="status-os">不明</span>
+          </div>
+          <div class="status-card">
+            <span class="status-label">言語</span>
+            <span class="status-value" id="status-lang">不明</span>
+          </div>
+          <div class="status-card">
+            <span class="status-label">ログイン</span>
+            <span class="status-value" id="status-logged-in">不明</span>
+          </div>
+          <div class="status-card">
+            <span class="status-label">IDトークン</span>
+            <span class="status-value" id="status-token">不明</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel input-panel">
+        <div class="panel-head">
+          <h2>入力</h2>
+          <p>業務文章を入力して変換してください。</p>
+        </div>
+        <label class="field">
+          <span class="field-label">業務文章</span>
+          <textarea
+            id="input-text"
+            placeholder="業務フローを自然文で入力してください。"
+          ></textarea>
+        </label>
+        <div class="actions">
+          <button class="primary" id="convert-btn" type="button">変換</button>
+          <button class="ghost" id="clear-btn" type="button">クリア</button>
+          <span class="request-state" id="request-state">待機</span>
+        </div>
+        <div class="error" id="error-output" role="status"></div>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="panel-head">
+          <h2>出力</h2>
+          <p>definition / agent_logs / meta をJSONで表示します。</p>
+        </div>
+        <div class="output-grid">
+          <div class="output-card">
+            <h3>定義</h3>
+            <pre id="definition-output">レスポンス待ち。</pre>
+          </div>
+          <div class="output-card">
+            <h3>Agentログ</h3>
+            <pre id="logs-output">レスポンス待ち。</pre>
+          </div>
+          <div class="output-card">
+            <h3>メタ</h3>
+            <pre id="meta-output">レスポンス待ち。</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>設定は起動時に config.js へ注入されます。</footer>
+
+    <script>
+      const config = window.__CONFIG__ || {};
+      const liffId = config.LIFF_ID || "";
+      const backendBaseUrl = config.BACKEND_BASE_URL || "";
+
+      const configStatus = document.getElementById("config-status");
+      const inClientStatus = document.getElementById("status-in-client");
+      const osStatus = document.getElementById("status-os");
+      const langStatus = document.getElementById("status-lang");
+      const loggedInStatus = document.getElementById("status-logged-in");
+      const tokenStatus = document.getElementById("status-token");
+
+      const inputText = document.getElementById("input-text");
+      const convertBtn = document.getElementById("convert-btn");
+      const clearBtn = document.getElementById("clear-btn");
+      const requestState = document.getElementById("request-state");
+      const errorOutput = document.getElementById("error-output");
+      const definitionOutput = document.getElementById("definition-output");
+      const logsOutput = document.getElementById("logs-output");
+      const metaOutput = document.getElementById("meta-output");
+
+      const state = {
+        liffReady: false,
+      };
+
+      const setStatus = (el, value) => {
+        el.textContent = value;
+      };
+
+      const setError = (message) => {
+        if (!message) {
+          errorOutput.textContent = "";
+          errorOutput.style.display = "none";
+          return;
+        }
+        errorOutput.textContent = message;
+        errorOutput.style.display = "block";
+      };
+
+      const setRequestState = (value) => {
+        requestState.textContent = value;
+      };
+
+      const normalizeBaseUrl = (url) => url.replace(/\/+$/, "");
+
+      const updateConfigStatus = () => {
+        if (liffId && backendBaseUrl) {
+          setStatus(configStatus, "設定済み");
+        } else {
+          setStatus(configStatus, "未設定");
+        }
+      };
+
+      const updateLiffStatus = () => {
+        if (!window.liff) {
+          setStatus(inClientStatus, "利用不可");
+          setStatus(osStatus, "利用不可");
+          setStatus(langStatus, "利用不可");
+          setStatus(loggedInStatus, "利用不可");
+          setStatus(tokenStatus, "利用不可");
+          return;
+        }
+
+        const safeCall = (fn, fallback) => {
+          try {
+            return fn();
+          } catch (err) {
+            return fallback;
+          }
+        };
+
+        setStatus(
+          inClientStatus,
+          safeCall(() => (liff.isInClient() ? "はい" : "いいえ"), "不明")
+        );
+        setStatus(osStatus, safeCall(() => liff.getOS(), "不明"));
+        setStatus(langStatus, safeCall(() => liff.getLanguage(), "不明"));
+        setStatus(
+          loggedInStatus,
+          safeCall(() => (liff.isLoggedIn() ? "はい" : "いいえ"), "不明")
+        );
+        const token = safeCall(() => liff.getIDToken(), "");
+        setStatus(tokenStatus, token ? "あり" : "なし");
+      };
+
+      const initLiff = async () => {
+        if (!window.liff) {
+          setError("LIFF SDK の読み込みに失敗しました。");
+          updateLiffStatus();
+          return;
+        }
+        if (!liffId) {
+          setError("LIFF_ID が設定されていません。");
+          updateLiffStatus();
+          return;
+        }
+        try {
+          await liff.init({ liffId });
+          state.liffReady = true;
+          updateLiffStatus();
+        } catch (err) {
+          setError("LIFF init に失敗しました。設定を確認してください。");
+          updateLiffStatus();
+        }
+      };
+
+      const handleConvert = async () => {
+        setError("");
+        if (!backendBaseUrl) {
+          setError("BACKEND_BASE_URL が設定されていません。");
+          return;
+        }
+        const text = inputText.value.trim();
+        if (!text) {
+          setError("文章を入力してください。");
+          return;
+        }
+
+        const endpoint = `${normalizeBaseUrl(backendBaseUrl)}/api/convert`;
+        const headers = { "Content-Type": "application/json" };
+        let idToken = "";
+        if (window.liff && state.liffReady) {
+          idToken = liff.getIDToken() || "";
+        }
+        if (idToken) {
+          headers.Authorization = `Bearer ${idToken}`;
+        }
+
+        try {
+          setRequestState("送信中");
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ text }),
+          });
+
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            setError(`リクエストに失敗しました (${response.status})。`);
+            return;
+          }
+
+          definitionOutput.textContent = JSON.stringify(
+            payload.definition || {},
+            null,
+            2
+          );
+          logsOutput.textContent = JSON.stringify(
+            payload.agent_logs || [],
+            null,
+            2
+          );
+          metaOutput.textContent = JSON.stringify(payload.meta || {}, null, 2);
+          setRequestState("完了");
+          updateLiffStatus();
+        } catch (err) {
+          setError("ネットワークエラー。");
+        } finally {
+          setTimeout(() => setRequestState("待機"), 1500);
+        }
+      };
+
+      const handleClear = () => {
+        inputText.value = "";
+        definitionOutput.textContent = "レスポンス待ち。";
+        logsOutput.textContent = "レスポンス待ち。";
+        metaOutput.textContent = "レスポンス待ち。";
+        setError("");
+      };
+
+      updateConfigStatus();
+      initLiff();
+
+      convertBtn.addEventListener("click", handleConvert);
+      clearBtn.addEventListener("click", handleClear);
+    </script>
+  </body>
+</html>

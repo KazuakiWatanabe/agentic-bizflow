@@ -35,6 +35,13 @@
 
 ---
 
+## ドキュメント
+
+- フロント仕様: [`frontend/README_FRONTEND_SPEC.md`](./frontend/README_FRONTEND_SPEC.md)
+- LIFF設定手順: [`docs/LIFF_SETUP.md`](./docs/LIFF_SETUP.md)
+
+---
+
 ## 🧠 Agent 構成（概要）
 
 ## 🗺️ アーキテクチャ図（Zenn/審査員向け）
