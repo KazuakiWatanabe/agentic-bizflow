@@ -212,8 +212,15 @@
         transform: translateY(1px);
       }
 
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+        box-shadow: none;
+      }
+
       .request-state {
         font-size: 13px;
+        font-weight: 600;
         color: var(--muted);
       }
 
@@ -245,6 +252,41 @@
         font-size: 15px;
       }
 
+      .output-details {
+        margin-top: 16px;
+      }
+
+      details.output-details {
+        padding: 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(30, 30, 30, 0.08);
+      }
+
+      details.output-details summary {
+        list-style: none;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      details.output-details summary::after {
+        content: "▼";
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      details.output-details[open] summary::after {
+        content: "▲";
+      }
+
+      details.output-details summary::-webkit-details-marker {
+        display: none;
+      }
+
       pre {
         margin: 0;
         white-space: pre-wrap;
@@ -253,6 +295,10 @@
           monospace;
         font-size: 13px;
         color: #1c1f24;
+      }
+
+      details.output-details pre {
+        margin-top: 12px;
       }
 
       footer {
@@ -338,20 +384,25 @@
           <textarea
             id="input-text"
             placeholder="業務フローを自然文で入力してください。"
-          ></textarea>
+          >経費を申請し、承認されたら精算する</textarea>
         </label>
         <div class="actions">
           <button class="primary" id="convert-btn" type="button">変換</button>
           <button class="ghost" id="clear-btn" type="button">クリア</button>
-          <span class="request-state" id="request-state">待機</span>
+          <button class="ghost" id="login-btn" type="button">
+            ログイン（必要な場合）
+          </button>
+          <span class="request-state" id="request-state" aria-live="polite">
+            状態: 待機
+          </span>
         </div>
-        <div class="error" id="error-output" role="status"></div>
+        <div class="error" id="error-output" role="status" aria-live="polite"></div>
       </section>
 
       <section class="panel output-panel">
         <div class="panel-head">
           <h2>出力</h2>
-          <p>definition / agent_logs / meta をJSONで表示します。</p>
+          <p>definition / meta / agent_logs をJSONで表示します。</p>
         </div>
         <div class="output-grid">
           <div class="output-card">
@@ -359,14 +410,14 @@
             <pre id="definition-output">レスポンス待ち。</pre>
           </div>
           <div class="output-card">
-            <h3>Agentログ</h3>
-            <pre id="logs-output">レスポンス待ち。</pre>
-          </div>
-          <div class="output-card">
             <h3>メタ</h3>
             <pre id="meta-output">レスポンス待ち。</pre>
           </div>
         </div>
+        <details class="output-details" id="logs-details">
+          <summary>Agentログ（クリックで展開）</summary>
+          <pre id="logs-output">レスポンス待ち。</pre>
+        </details>
       </section>
     </main>
 
@@ -387,17 +438,27 @@
       const inputText = document.getElementById("input-text");
       const convertBtn = document.getElementById("convert-btn");
       const clearBtn = document.getElementById("clear-btn");
+      const loginBtn = document.getElementById("login-btn");
       const requestState = document.getElementById("request-state");
       const errorOutput = document.getElementById("error-output");
       const definitionOutput = document.getElementById("definition-output");
       const logsOutput = document.getElementById("logs-output");
       const metaOutput = document.getElementById("meta-output");
 
+      const sampleText = "経費を申請し、承認されたら精算する";
+
       const state = {
         liffReady: false,
+        configReady: false,
+        isProcessing: false,
+        grantedScopes: null,
+        loggedIn: false,
       };
 
       const setStatus = (el, value) => {
+        if (!el) {
+          return;
+        }
         el.textContent = value;
       };
 
@@ -412,17 +473,76 @@
       };
 
       const setRequestState = (value) => {
-        requestState.textContent = value;
+        requestState.textContent = `状態: ${value}`;
+      };
+
+      const setProcessing = (processing) => {
+        state.isProcessing = processing;
+        convertBtn.disabled = processing || !state.configReady;
+        clearBtn.disabled = processing;
+        inputText.readOnly = processing;
+        updateLoginButton();
       };
 
       const normalizeBaseUrl = (url) => url.replace(/\/+$/, "");
 
-      const updateConfigStatus = () => {
-        if (liffId && backendBaseUrl) {
-          setStatus(configStatus, "設定済み");
-        } else {
-          setStatus(configStatus, "未設定");
+      const getMissingConfig = () => {
+        const missing = [];
+        if (!liffId) {
+          missing.push("LIFF_ID");
         }
+        if (!backendBaseUrl) {
+          missing.push("BACKEND_BASE_URL");
+        }
+        return missing;
+      };
+
+      const updateConfigStatus = () => {
+        const missing = getMissingConfig();
+        if (missing.length === 0) {
+          setStatus(configStatus, "設定済み");
+          state.configReady = true;
+        } else {
+          setStatus(configStatus, `不足: ${missing.join(" / ")}`);
+          state.configReady = false;
+        }
+        setProcessing(state.isProcessing);
+        return missing;
+      };
+
+      const updateGrantedScopes = async () => {
+        if (!window.liff || !state.liffReady) {
+          state.grantedScopes = [];
+          return [];
+        }
+        try {
+          state.grantedScopes = await liff.getGrantedScopes();
+        } catch (err) {
+          state.grantedScopes = [];
+        }
+        return state.grantedScopes;
+      };
+
+      const hasOpenIdScope = () =>
+        Array.isArray(state.grantedScopes) &&
+        state.grantedScopes.includes("openid");
+
+      const updateLoginButton = () => {
+        if (!loginBtn) {
+          return;
+        }
+        if (!window.liff || !state.liffReady) {
+          loginBtn.disabled = true;
+          loginBtn.textContent = "ログイン不可";
+          return;
+        }
+        if (state.loggedIn) {
+          loginBtn.disabled = true;
+          loginBtn.textContent = "ログイン済み";
+          return;
+        }
+        loginBtn.disabled = state.isProcessing;
+        loginBtn.textContent = "ログイン（必要な場合）";
       };
 
       const updateLiffStatus = () => {
@@ -432,6 +552,8 @@
           setStatus(langStatus, "利用不可");
           setStatus(loggedInStatus, "利用不可");
           setStatus(tokenStatus, "利用不可");
+          state.loggedIn = false;
+          updateLoginButton();
           return;
         }
 
@@ -449,59 +571,107 @@
         );
         setStatus(osStatus, safeCall(() => liff.getOS(), "不明"));
         setStatus(langStatus, safeCall(() => liff.getLanguage(), "不明"));
-        setStatus(
-          loggedInStatus,
-          safeCall(() => (liff.isLoggedIn() ? "はい" : "いいえ"), "不明")
-        );
-        const token = safeCall(() => liff.getIDToken(), "");
-        setStatus(tokenStatus, token ? "あり" : "なし");
+
+        state.loggedIn = safeCall(() => liff.isLoggedIn(), false);
+        setStatus(loggedInStatus, state.loggedIn ? "はい" : "いいえ");
+
+        if (!state.liffReady) {
+          setStatus(tokenStatus, "未初期化");
+        } else if (!hasOpenIdScope()) {
+          setStatus(tokenStatus, "scopeなし");
+        } else {
+          const token = safeCall(() => liff.getIDToken(), "");
+          setStatus(tokenStatus, token ? "あり" : "なし");
+        }
+
+        updateLoginButton();
       };
 
       const initLiff = async () => {
         if (!window.liff) {
-          setError("LIFF SDK の読み込みに失敗しました。");
+          setError(
+            "LIFF SDK の読み込みに失敗しました。ネットワークやスクリプトを確認してください。"
+          );
+          setRequestState("失敗");
           updateLiffStatus();
           return;
         }
         if (!liffId) {
-          setError("LIFF_ID が設定されていません。");
+          setError("LIFF_ID is not set");
+          setRequestState("設定不足");
           updateLiffStatus();
           return;
         }
         try {
           await liff.init({ liffId });
           state.liffReady = true;
+          await updateGrantedScopes();
           updateLiffStatus();
         } catch (err) {
-          setError("LIFF init に失敗しました。設定を確認してください。");
+          setError(
+            "LIFF init に失敗しました。Endpoint URL / HTTPS / LIFF_ID を確認してください。"
+          );
+          setRequestState("失敗");
           updateLiffStatus();
         }
       };
 
+      const getIdTokenIfAvailable = async () => {
+        if (!window.liff || !state.liffReady) {
+          return "";
+        }
+        if (!Array.isArray(state.grantedScopes)) {
+          await updateGrantedScopes();
+        }
+        if (!hasOpenIdScope()) {
+          return "";
+        }
+        try {
+          return liff.getIDToken() || "";
+        } catch (err) {
+          return "";
+        }
+      };
+
+      const renderJson = (element, value, fallback) => {
+        const resolved = value === undefined ? fallback : value;
+        element.textContent = JSON.stringify(resolved, null, 2);
+      };
+
+      const resetOutputs = () => {
+        definitionOutput.textContent = "レスポンス待ち。";
+        logsOutput.textContent = "レスポンス待ち。";
+        metaOutput.textContent = "レスポンス待ち。";
+      };
+
       const handleConvert = async () => {
         setError("");
-        if (!backendBaseUrl) {
-          setError("BACKEND_BASE_URL が設定されていません。");
-          return;
-        }
-        const text = inputText.value.trim();
-        if (!text) {
-          setError("文章を入力してください。");
+
+        const missing = getMissingConfig();
+        if (missing.length > 0) {
+          setError(missing.map((item) => `${item} is not set`).join(" / "));
+          setRequestState("設定不足");
           return;
         }
 
+        const text = inputText.value.trim();
+        if (!text) {
+          setError("文章を入力してください。");
+          setRequestState("入力不足");
+          return;
+        }
+
+        setProcessing(true);
+        setRequestState("処理中...");
+
         const endpoint = `${normalizeBaseUrl(backendBaseUrl)}/api/convert`;
         const headers = { "Content-Type": "application/json" };
-        let idToken = "";
-        if (window.liff && state.liffReady) {
-          idToken = liff.getIDToken() || "";
-        }
+        const idToken = await getIdTokenIfAvailable();
         if (idToken) {
           headers.Authorization = `Bearer ${idToken}`;
         }
 
         try {
-          setRequestState("送信中");
           const response = await fetch(endpoint, {
             method: "POST",
             headers,
@@ -510,43 +680,64 @@
 
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) {
-            setError(`リクエストに失敗しました (${response.status})。`);
+            setError(
+              `APIがエラーを返しました (${response.status})。CORS/URL/入力を確認してください。`
+            );
+            setRequestState("失敗");
             return;
           }
 
-          definitionOutput.textContent = JSON.stringify(
-            payload.definition || {},
-            null,
-            2
-          );
-          logsOutput.textContent = JSON.stringify(
-            payload.agent_logs || [],
-            null,
-            2
-          );
-          metaOutput.textContent = JSON.stringify(payload.meta || {}, null, 2);
-          setRequestState("完了");
+          renderJson(definitionOutput, payload.definition, {});
+          renderJson(logsOutput, payload.agent_logs, []);
+          renderJson(metaOutput, payload.meta, {});
+          setRequestState("成功");
           updateLiffStatus();
         } catch (err) {
-          setError("ネットワークエラー。");
+          setError("通信に失敗しました。CORS/URL/ネットワークを確認してください。");
+          setRequestState("失敗");
         } finally {
-          setTimeout(() => setRequestState("待機"), 1500);
+          setProcessing(false);
         }
       };
 
       const handleClear = () => {
         inputText.value = "";
-        definitionOutput.textContent = "レスポンス待ち。";
-        logsOutput.textContent = "レスポンス待ち。";
-        metaOutput.textContent = "レスポンス待ち。";
+        resetOutputs();
         setError("");
+        setRequestState("待機");
       };
 
-      updateConfigStatus();
-      initLiff();
+      const handleLogin = () => {
+        if (!window.liff || !state.liffReady || state.loggedIn) {
+          return;
+        }
+        liff.login();
+      };
+
+      const initialize = async () => {
+        if (!inputText.value.trim()) {
+          inputText.value = sampleText;
+        }
+        resetOutputs();
+
+        const missing = updateConfigStatus();
+        if (missing.length > 0) {
+          setError(missing.map((item) => `${item} is not set`).join(" / "));
+          setRequestState("設定不足");
+        } else {
+          setRequestState("待機");
+        }
+
+        await initLiff();
+      };
 
       convertBtn.addEventListener("click", handleConvert);
       clearBtn.addEventListener("click", handleClear);
+      if (loginBtn) {
+        loginBtn.addEventListener("click", handleLogin);
+      }
+
+      initialize();
     </script>
   </body>
 </html>

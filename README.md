@@ -35,22 +35,19 @@ Agentic BizFlow は、以下を満たすことで **Agentic AI** として設計
 
 ---
 
-<<<<<<< HEAD
-## ドキュメント
+## 📚 ドキュメント
 
+- 最上位ルール: [`AGENTS.md`](./AGENTS.md)
 - フロント仕様: [`frontend/README_FRONTEND_SPEC.md`](./frontend/README_FRONTEND_SPEC.md)
 - LIFF設定手順: [`docs/LIFF_SETUP.md`](./docs/LIFF_SETUP.md)
 
 ---
 
-## 🧠 Agent 構成（概要）
-
-## 🗺️ アーキテクチャ図（Zenn/審査員向け）
-=======
 ## 🧠 Agent 構成
->>>>>>> backend-mvp
 
-![Agentic BizFlow Architecture](./docs/diagrams/agentic-architecture.png)
+### アーキテクチャ図
+
+![Agentic BizFlow Architecture](./docs/agentic-architecture.png)
 
 ### 構成のポイント
 
@@ -88,7 +85,7 @@ agentic-bizflow/
 │  └─ tests/
 │     ├─ test_schema.py
 │     └─ test_orchestrator.py
-└─ frontend/          # デモ用UI（後続フェーズ）
+└─ frontend/          # LIFF最小フロント
 ```
 
 ---
@@ -121,7 +118,17 @@ main
 
 - ✅ agentic-core（schemas / orchestrator / pytest）実装完了
 - ✅ backend-mvp（FastAPI + Docker）Cloud Run デプロイ・動作確認済み
-- ⏳ frontend-mvp（デモ用UI）は後続フェーズ
+- ✅ frontend-mvp（LIFF最小フロント）実装完了
+
+---
+
+## 📱 フロント（LIFF最小UI）
+
+- 1画面構成（入力 → 実行 → JSON表示）
+- LIFF状態表示（LINE内/OS/言語/ログイン/IDトークン可否）
+- `config.js` による設定注入（`LIFF_ID` / `BACKEND_BASE_URL`）
+- 設定不足時は明確なメッセージを表示して停止
+- `agent_logs` は折りたたみ表示、JSONは整形表示
 
 ---
 
