@@ -50,7 +50,26 @@ Agentic BizFlow は、以下を満たすことで **Agentic AI** として設計
 ## 🧠 Agent 構成
 >>>>>>> backend-mvp
 
-![Agentic BizFlow Architecture](./docs/diagrams/agentic-architecture.png)
+```mermaid
+flowchart LR
+  Input["Input（業務文章）\n- Manual / Notion / Slack\n- 曖昧な自然文"] --> UI["Web UI / API Client\n- テキスト入力\n- Convert 実行\n- 結果表示（JSON + logs）"]
+  UI --> Orchestrator["Orchestrator（State Machine）\n- Step control\n- Retry（max 2）\n- Schema enforcement（Pydantic）"]
+  Orchestrator --> Reader["Reader Agent（理解）\n- entities\n- actions\n- conditions\n- exceptions"]
+  Orchestrator -->|Retry with constraints (max 2)| Reader
+  Reader --> Planner["Planner Agent（分解）\n- task units\n- roles\n- triggers"]
+  Planner --> Validator["Validator Agent（検証）\n- missing fields\n- ambiguity\n- conflicts\n- issues / open_questions"]
+  Validator -->|OK| Generator["Generator Agent（生成）\n- schema-valid JSON only"]
+  Generator --> Output["Output（運用オブジェクト）\n- BusinessDefinition（JSON）\n- agent_logs（短い要約）"]
+  Validator -->|Issues found| Orchestrator
+  Orchestrator -. "calls" .-> LLM["Gemini API / ADK\n（LLM / Agent）"]
+  UI -. "deploy / Text" .-> CloudRun["Cloud Run\n（API実行基盤）"]
+  subgraph Google_Cloud["Google Cloud"]
+    CloudRun
+    LLM
+  end
+```
+
+![Agentic BizFlow Architecture](./docs/agentic-architecture.png)
 
 ### 構成のポイント
 
