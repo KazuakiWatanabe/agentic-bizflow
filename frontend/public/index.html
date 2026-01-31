@@ -724,10 +724,11 @@
         if (missing.length > 0) {
           setError(missing.map((item) => `${item} is not set`).join(" / "));
           setRequestState("設定不足");
-        } else {
-          setRequestState("待機");
+          updateLiffStatus();
+          return;
         }
 
+        setRequestState("待機");
         await initLiff();
       };
 
