@@ -27,13 +27,21 @@
 
 ## 3.5) フロントの環境変数設定（Cloud Run 例）
 - フロントサービスに `LIFF_ID` と `BACKEND_BASE_URL` を設定する。
-- 例（プレースホルダのみ）:
+- Console（GUI）で設定する場合:
+  1. Cloud Run → 対象フロントサービスを選択
+  2. 「編集して新しいリビジョンをデプロイ」
+  3. 「変数とシークレット」→「環境変数」
+  4. `LIFF_ID=<liff-id>` / `BACKEND_BASE_URL=<backend-url>` を追加してデプロイ
+- CLI で設定する場合（プレースホルダのみ）:
 
 ```sh
 gcloud run services update <frontend-service> \
   --region=<region> \
   --set-env-vars "LIFF_ID=<liff-id>,BACKEND_BASE_URL=<backend-url>"
 ```
+
+Note:
+- 反映には新しいリビジョンのデプロイが必要
 
 ## 4) 動作確認
 - LINE内でLIFF URLを開き、画面が表示されることを確認する。

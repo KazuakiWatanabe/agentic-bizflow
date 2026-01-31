@@ -130,6 +130,18 @@ main
 - 設定不足時は明確なメッセージを表示して停止
 - `agent_logs` は折りたたみ表示、JSONは整形表示
 
+### Cloud Run 環境変数（フロント）
+
+- `LIFF_ID`: LINE Developers Console で発行される LIFF ID（`<liff-id>`）
+- `BACKEND_BASE_URL`: `/api/convert` を提供するバックエンドURL（`<backend-url>`）
+- 設定例（プレースホルダのみ）:
+
+```sh
+gcloud run services update <frontend-service> \
+  --region=<region> \
+  --set-env-vars "LIFF_ID=<liff-id>,BACKEND_BASE_URL=<backend-url>"
+```
+
 ---
 
 ## 🚀 Cloud Run デプロイ / API 実行例
