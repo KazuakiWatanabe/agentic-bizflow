@@ -3,7 +3,7 @@
 ## 目的
 - LIFF上で動作する1画面UIを提供し、`/api/convert` へ POST する。
 - `definition` / `agent_logs` / `meta` をJSONで表示する。
-- LIFFの実行状態（LINE内/OS/言語/ログイン/IDトークン可否）を表示する。
+- LIFFの実行状態（LINE内/OS/言語/コンテキスト/ログイン/IDトークン可否）を表示する。
 
 ## 画面仕様
 - 1画面構成（入力 → 実行 → 結果表示）。
@@ -12,6 +12,7 @@
 - エラーメッセージは次のアクションが分かる内容にする。
 - `definition` と `meta` を優先表示し、`agent_logs` は折りたたみ表示とする。
 - JSONは整形（pretty print）して表示する。
+- コンテキストは `type / viewType` を簡易表示する（ユーザー識別子は表示しない）。
 
 ## 設定注入
 - `public/config.js` は起動時に `public/config.js.template` から生成する。

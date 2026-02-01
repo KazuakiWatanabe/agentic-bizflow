@@ -364,6 +364,10 @@
             <span class="status-value" id="status-lang">不明</span>
           </div>
           <div class="status-card">
+            <span class="status-label">コンテキスト</span>
+            <span class="status-value" id="status-context">不明</span>
+          </div>
+          <div class="status-card">
             <span class="status-label">ログイン</span>
             <span class="status-value" id="status-logged-in">不明</span>
           </div>
@@ -432,6 +436,7 @@
       const inClientStatus = document.getElementById("status-in-client");
       const osStatus = document.getElementById("status-os");
       const langStatus = document.getElementById("status-lang");
+      const contextStatus = document.getElementById("status-context");
       const loggedInStatus = document.getElementById("status-logged-in");
       const tokenStatus = document.getElementById("status-token");
 
@@ -485,6 +490,15 @@
       };
 
       const normalizeBaseUrl = (url) => url.replace(/\/+$/, "");
+
+      const formatContextLabel = (context) => {
+        if (!context || typeof context !== "object") {
+          return "不明";
+        }
+        const type = context.type || "不明";
+        const viewType = context.viewType || "";
+        return viewType ? `${type} / ${viewType}` : type;
+      };
 
       const getMissingConfig = () => {
         const missing = [];
@@ -550,6 +564,7 @@
           setStatus(inClientStatus, "利用不可");
           setStatus(osStatus, "利用不可");
           setStatus(langStatus, "利用不可");
+          setStatus(contextStatus, "利用不可");
           setStatus(loggedInStatus, "利用不可");
           setStatus(tokenStatus, "利用不可");
           state.loggedIn = false;
@@ -576,12 +591,17 @@
         setStatus(loggedInStatus, state.loggedIn ? "はい" : "いいえ");
 
         if (!state.liffReady) {
+          setStatus(contextStatus, "未初期化");
           setStatus(tokenStatus, "未初期化");
-        } else if (!hasOpenIdScope()) {
-          setStatus(tokenStatus, "scopeなし");
         } else {
-          const token = safeCall(() => liff.getIDToken(), "");
-          setStatus(tokenStatus, token ? "あり" : "なし");
+          const context = safeCall(() => liff.getContext(), null);
+          setStatus(contextStatus, formatContextLabel(context));
+          if (!hasOpenIdScope()) {
+            setStatus(tokenStatus, "scopeなし");
+          } else {
+            const token = safeCall(() => liff.getIDToken(), "");
+            setStatus(tokenStatus, token ? "あり" : "なし");
+          }
         }
 
         updateLoginButton();

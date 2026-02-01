@@ -125,7 +125,7 @@ main
 ## 📱 フロント（LIFF最小UI）
 
 - 1画面構成（入力 → 実行 → JSON表示）
-- LIFF状態表示（LINE内/OS/言語/ログイン/IDトークン可否）
+- LIFF状態表示（LINE内/OS/言語/コンテキスト/ログイン/IDトークン可否）
 - `config.js` による設定注入（`LIFF_ID` / `BACKEND_BASE_URL`）
 - 設定不足時は明確なメッセージを表示して停止
 - `agent_logs` は折りたたみ表示、JSONは整形表示
