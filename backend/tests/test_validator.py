@@ -99,3 +99,100 @@ def test_validator_no_compound_issue_for_simple_text() -> None:
 
     assert result.get("compound_detected") is False
     assert "compound_text_single_task" not in (result.get("issues") or [])
+
+
+def test_validator_detects_non_business_task() -> None:
+    """非業務タスクが含まれる場合に issue が追加されることを確認する。
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Variables:
+        validator:
+            テスト対象のValidatorAgent。
+        planner_out:
+            非業務タスクを含むPlanner出力。
+        result:
+            Validatorの出力辞書。
+
+    Raises:
+        AssertionError: 期待する issue が含まれない場合に発生
+    """
+    validator = ValidatorAgent()
+    planner_out = {
+        "tasks": [
+            {
+                "id": "task_1",
+                "name": "おはようございます",
+                "role": "Operator",
+                "trigger": "",
+                "steps": ["挨拶する"],
+            }
+        ],
+        "roles": [{"name": "Operator"}],
+    }
+    result = validator.run(
+        planner_out,
+        input_text="おはようございます",
+        actions=["おはようございます"],
+    )
+
+    assert "non_business_task_detected" in (result.get("issues") or [])
+    assert any(
+        item.get("code") == "non_business_task_detected"
+        for item in result.get("issue_details") or []
+    )
+
+
+def test_validator_warns_notification_without_recipient() -> None:
+    """通知タスクに通知先が無い場合に warning を出すことを確認する。
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Variables:
+        validator:
+            テスト対象のValidatorAgent。
+        planner_out:
+            通知タスクを含むPlanner出力。
+        entities:
+            抽出したエンティティ情報。
+        result:
+            Validatorの出力辞書。
+
+    Raises:
+        AssertionError: 期待する warning が含まれない場合に発生
+    """
+    validator = ValidatorAgent()
+    planner_out = {
+        "tasks": [
+            {
+                "id": "task_1",
+                "name": "鈴木さんに連絡する",
+                "role": "Applicant",
+                "trigger": "",
+                "steps": ["連絡する"],
+                "recipients": [],
+            }
+        ],
+        "roles": [{"name": "Applicant"}],
+    }
+    entities = {"people": [{"name": "鈴木", "surface": "鈴木さん", "type": "person"}]}
+    result = validator.run(
+        planner_out,
+        input_text="鈴木さんに連絡する",
+        actions=["鈴木さんに連絡する"],
+        entities=entities,
+    )
+
+    assert "notification_without_recipient" in (result.get("issues") or [])
+    assert any(
+        item.get("code") == "notification_without_recipient"
+        for item in result.get("issue_details") or []
+    )

@@ -8,7 +8,7 @@ Note:
     - 条件節は削除せず候補として残す
 """
 
-from app.services.text_splitter import split_actions
+from app.services.text_splitter import filter_business_actions, split_actions
 
 
 def test_split_actions_complex_sentence() -> None:
@@ -114,3 +114,35 @@ def test_split_actions_with_conditions_and_punctuation() -> None:
     assert "申請する" in actions
     assert "承認後に精算する" in actions
     assert "完了を通知する" in actions
+
+
+def test_filter_business_actions_removes_greetings() -> None:
+    """挨拶・雑談が業務アクションから除外されることを確認する。
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Variables:
+        raw_actions:
+            分割済みの候補一覧。
+        filtered_actions:
+            フィルタ後の候補一覧。
+
+    Raises:
+        AssertionError: 期待する除外が行われない場合に発生
+    """
+    raw_actions = [
+        "田中さんおはようございます",
+        "今日は天気が良いです",
+        "経費を承認されたら精算する",
+        "鈴木さんに渡す",
+    ]
+    filtered_actions = filter_business_actions(raw_actions)
+
+    assert "田中さんおはようございます" not in filtered_actions
+    assert "今日は天気が良いです" not in filtered_actions
+    assert "経費を承認されたら精算する" in filtered_actions
+    assert "鈴木さんに渡す" in filtered_actions

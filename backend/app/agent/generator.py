@@ -10,7 +10,7 @@ Note:
 
 from typing import Any, Dict, List
 
-from .schemas import BusinessDefinition, RoleDefinition, TaskDefinition
+from .schemas import BusinessDefinition, RecipientDefinition, RoleDefinition, TaskDefinition
 
 
 class GeneratorAgent:
@@ -259,6 +259,10 @@ class GeneratorAgent:
                 例外時の対応一覧。
             notifications:
                 通知内容の一覧。
+            trigger_value:
+                タスクのトリガー値（空文字は維持する）。
+            recipients:
+                通知先の一覧。
 
         Raises:
             None
@@ -266,17 +270,56 @@ class GeneratorAgent:
         Note:
             - 不足項目は default_role/default_trigger で補完する
             - steps が空の場合は既定値を使用する
+            - trigger が空文字の場合はそのまま保持する
         """
         steps = task.get("steps") or ["Review input"]
         exception_handling = task.get("exception_handling") or []
         notifications = task.get("notifications") or []
 
+        trigger_value = task.get("trigger")
+        if trigger_value is None:
+            trigger_value = default_trigger
+        recipients = self._coerce_recipients(task.get("recipients") or [])
+
         return TaskDefinition(
             id=str(task.get("id") or "task_1"),
             name=str(task.get("name") or "Process request"),
             role=str(task.get("role") or default_role),
-            trigger=str(task.get("trigger") or default_trigger),
+            trigger=str(trigger_value or ""),
             steps=[str(item) for item in steps],
             exception_handling=[str(item) for item in exception_handling],
             notifications=[str(item) for item in notifications],
+            recipients=recipients,
         )
+
+    def _coerce_recipients(
+        self,
+        recipients: List[Dict[str, Any]],
+    ) -> List[RecipientDefinition]:
+        """通知先情報をRecipientDefinitionに整形する。
+
+        Args:
+            recipients: 通知先情報の辞書一覧
+
+        Returns:
+            RecipientDefinition の一覧
+
+        Variables:
+            results:
+                変換後の通知先一覧。
+            item:
+                通知先情報の辞書。
+
+        Note:
+            - type/name/surface が欠落する場合は空文字で補完する
+        """
+        results: List[RecipientDefinition] = []
+        for item in recipients:
+            results.append(
+                RecipientDefinition(
+                    type=str(item.get("type") or ""),
+                    name=str(item.get("name") or ""),
+                    surface=str(item.get("surface") or ""),
+                )
+            )
+        return results

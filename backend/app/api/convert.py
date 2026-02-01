@@ -61,6 +61,8 @@ class ConvertResponse(BaseModel):
             retries などのメタ情報。
             token_present はAuthorizationヘッダからIDトークンの有無を示す。
             actions と splitter_version は事前分割の結果を示す。
+            actions_raw / actions_filtered_out / action_filter_version / action_filter_fallback も含む。
+            entities / role_inference も含め、推定根拠を残す。
             compound_detected と validator_issues は検証結果の補助情報を示す。
     """
 

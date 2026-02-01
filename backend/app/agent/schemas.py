@@ -10,7 +10,7 @@ Note:
 
 from typing import List
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RoleDefinition(BaseModel):
@@ -36,10 +36,36 @@ class RoleDefinition(BaseModel):
     responsibilities: List[str]
 
 
+class RecipientDefinition(BaseModel):
+    """通知先の定義情報を保持する。
+
+    主な属性: type, name, surface
+    主なメソッド: なし（データ保持のみ）
+    制約: スキーマ外のフィールドは受け付けない。
+
+    Variables:
+        type:
+            通知先の種別（person など）。
+        name:
+            通知先の名称。
+        surface:
+            原文の表記。
+
+    Note:
+        - extra fields は禁止する
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str
+    name: str
+    surface: str
+
+
 class TaskDefinition(BaseModel):
     """タスクの定義情報を保持する。
 
-    主な属性: id, name, role, trigger, steps, exception_handling, notifications
+    主な属性: id, name, role, trigger, steps, exception_handling, notifications, recipients
     主なメソッド: なし（データ保持のみ）
     制約: スキーマ外のフィールドは受け付けない。
 
@@ -58,6 +84,8 @@ class TaskDefinition(BaseModel):
             例外時の対応一覧。
         notifications:
             通知内容の一覧。
+        recipients:
+            通知先の一覧。
 
     Note:
         - extra fields は禁止する
@@ -72,6 +100,7 @@ class TaskDefinition(BaseModel):
     steps: List[str]
     exception_handling: List[str]
     notifications: List[str]
+    recipients: List[RecipientDefinition] = Field(default_factory=list)
 
 
 class BusinessDefinition(BaseModel):

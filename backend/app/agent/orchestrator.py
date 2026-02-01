@@ -78,7 +78,17 @@ class Orchestrator:
             reader_out:
                 ReaderAgentの抽出結果。
             actions:
-                事前分割されたアクション候補一覧。
+                フィルタ済みのアクション候補一覧。
+            actions_raw:
+                split_actions 直後のアクション候補一覧。
+            actions_filtered_out:
+                フィルタで除外された候補一覧。
+            action_filter_version:
+                アクションフィルタのバージョン識別子。
+            action_filter_fallback:
+                フィルタ結果が空だったため raw に戻したかどうか。
+            entities:
+                抽出したエンティティ詳細情報。
             splitter_version:
                 分割ルールのバージョン識別子。
             retries:
@@ -93,16 +103,25 @@ class Orchestrator:
                 Validatorが検出した問題点の詳細一覧。
             compound_detected:
                 複合文の可能性があるかどうか。
+            warning_issue_codes:
+                warning として扱う issue コード一覧。
+            blocking_issues:
+                失敗として扱う issue コード一覧。
+            only_warnings:
+                warning のみで構成されているかどうかのフラグ。
             definition:
                 生成済みの業務定義。
             meta:
-                retries / model / actions / splitter_version / compound_detected / validator_issues を含むメタ情報。
+                retries / model / actions / actions_raw / actions_filtered_out / action_filter_version /
+                action_filter_fallback / entities / role_inference / splitter_version / compound_detected /
+                validator_issues を含むメタ情報。
 
         Raises:
             ValueError: リトライ上限後も issues が残る場合に発生
 
         Note:
             - issues がある場合のみ再試行する
+            - warning issue は最大1回まで再試行し、それ以降は警告扱いで通過する
             - 再試行は最大2回までとする
         """
         agent_logs: List[Dict[str, Any]] = []
@@ -110,32 +129,59 @@ class Orchestrator:
         agent_logs.append(self._log_reader(reader_out))
 
         actions = reader_out.get("actions") or []
+        actions_raw = reader_out.get("actions_raw") or []
+        actions_filtered_out = reader_out.get("actions_filtered_out") or []
+        action_filter_version = reader_out.get("action_filter_version") or "unknown"
+        action_filter_fallback = bool(reader_out.get("action_filter_fallback"))
+        entities = reader_out.get("entities_detail") or {}
         splitter_version = reader_out.get("splitter_version") or "unknown"
         retries = 0
         planner_out: Dict[str, Any] = {}
         validator_out: Dict[str, Any] = {}
-
         while True:
             planner_out = self.planner.run(reader_out)
             agent_logs.append(self._log_planner(planner_out))
 
             validator_out = self.validator.run(
                 planner_out,
-                input_text=text,
-                actions=reader_out.get("actions") or [],
+                input_text=reader_out.get("input_text") or text,
+                actions=actions,
+                actions_filtered_out=actions_filtered_out,
+                entities=entities,
             )
             agent_logs.append(self._log_validator(validator_out))
 
             issues = validator_out.get("issues") or []
+            issue_details = validator_out.get("issue_details") or []
+            warning_issue_codes = {
+                detail.get("code")
+                for detail in issue_details
+                if detail.get("severity") == "warning"
+            }
+            blocking_issues = [
+                issue for issue in issues if issue not in warning_issue_codes
+            ]
+            only_warnings = bool(issues) and not blocking_issues
+
             if issues and retries < self.max_retries:
-                retries += 1
-                reader_out["retry_issues"] = issues
-                if "compound_text_single_task" in issues:
-                    reader_out["force_task_split"] = True
-                continue
+                if only_warnings and retries >= 1:
+                    issues = []
+                    validator_out["issues"] = []
+                else:
+                    retries += 1
+                    reader_out["retry_issues"] = issues
+                    if "compound_text_single_task" in issues:
+                        reader_out["force_task_split"] = True
+                    if "non_business_task_detected" in issues:
+                        reader_out["avoid_non_business"] = True
+                    continue
 
             if issues:
-                raise ValueError(f"Validation failed after retries: {issues}")
+                remaining = [
+                    issue for issue in issues if issue not in warning_issue_codes
+                ]
+                if remaining:
+                    raise ValueError(f"Validation failed after retries: {remaining}")
 
             break
 
@@ -148,10 +194,17 @@ class Orchestrator:
         agent_logs.append(self._log_generator(definition))
         validator_issue_details = validator_out.get("issue_details") or []
         compound_detected = bool(validator_out.get("compound_detected"))
+        role_inference = planner_out.get("role_inference") or []
         meta = {
             "retries": retries,
             "model": "stub",
             "actions": actions,
+            "actions_raw": actions_raw,
+            "actions_filtered_out": actions_filtered_out,
+            "action_filter_version": action_filter_version,
+            "action_filter_fallback": action_filter_fallback,
+            "entities": entities,
+            "role_inference": role_inference,
             "splitter_version": splitter_version,
             "compound_detected": compound_detected,
             "validator_issues": validator_issue_details
@@ -174,13 +227,19 @@ class Orchestrator:
                 Readerで抽出した登場人物の件数。
             actions:
                 Readerで抽出した操作の件数。
+            people:
+                抽出した人名エンティティの件数。
 
         Raises:
             None
         """
         entities = len(reader_out.get("entities") or [])
         actions = len(reader_out.get("actions") or [])
-        return {"step": "reader", "summary": f"entities={entities} actions={actions}"}
+        people = len(reader_out.get("entities_detail", {}).get("people") or [])
+        return {
+            "step": "reader",
+            "summary": f"entities={entities} actions={actions} people={people}",
+        }
 
     def _log_planner(self, planner_out: Dict[str, Any]) -> Dict[str, Any]:
         """Plannerの要約ログを作成する。
@@ -196,15 +255,18 @@ class Orchestrator:
                 Plannerで生成したタスク一覧。
             roles:
                 Plannerで生成したロール一覧。
+            role_inference:
+                役割推定の結果一覧。
 
         Raises:
             None
         """
         tasks = planner_out.get("tasks") or []
         roles = planner_out.get("roles") or []
+        role_inference = planner_out.get("role_inference") or []
         return {
             "step": "planner",
-            "summary": f"tasks={len(tasks)} roles={len(roles)}",
+            "summary": f"tasks={len(tasks)} roles={len(roles)} role_inference={len(role_inference)}",
         }
 
     def _log_validator(self, validator_out: Dict[str, Any]) -> Dict[str, Any]:
