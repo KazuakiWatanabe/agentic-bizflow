@@ -77,6 +77,10 @@ class Orchestrator:
                 各Agentの要約ログ一覧。
             reader_out:
                 ReaderAgentの抽出結果。
+            actions:
+                事前分割されたアクション候補一覧。
+            splitter_version:
+                分割ルールのバージョン識別子。
             retries:
                 Validator失敗時の再試行回数。
             planner_out:
@@ -88,7 +92,7 @@ class Orchestrator:
             definition:
                 生成済みの業務定義。
             meta:
-                retries と model を含むメタ情報。
+                retries / model / actions / splitter_version を含むメタ情報。
 
         Raises:
             ValueError: リトライ上限後も issues が残る場合に発生
@@ -101,6 +105,8 @@ class Orchestrator:
         reader_out = self.reader.run(text)
         agent_logs.append(self._log_reader(reader_out))
 
+        actions = reader_out.get("actions") or []
+        splitter_version = reader_out.get("splitter_version") or "unknown"
         retries = 0
         planner_out: Dict[str, Any] = {}
         validator_out: Dict[str, Any] = {}
@@ -130,7 +136,12 @@ class Orchestrator:
             validator_out=validator_out,
         )
         agent_logs.append(self._log_generator(definition))
-        meta = {"retries": retries, "model": "stub"}
+        meta = {
+            "retries": retries,
+            "model": "stub",
+            "actions": actions,
+            "splitter_version": splitter_version,
+        }
         return definition, agent_logs, meta
 
     def _log_reader(self, reader_out: Dict[str, Any]) -> Dict[str, Any]:

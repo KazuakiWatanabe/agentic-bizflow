@@ -43,3 +43,33 @@ def test_orchestrator_retries_and_returns_definition() -> None:
     assert isinstance(definition, BusinessDefinition)
     assert meta["retries"] >= 1
     assert any(log.get("step") == "validator" for log in agent_logs)
+
+
+def test_orchestrator_splits_tasks_from_actions() -> None:
+    """事前分割されたactionsがタスク分割に反映されることを確認する。
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Variables:
+        orchestrator:
+            テスト対象のOrchestrator。
+        definition:
+            生成された業務定義。
+        meta:
+            retries などのメタ情報。
+
+    Raises:
+        AssertionError: 期待する分割結果が得られない場合に発生
+    """
+    orchestrator = Orchestrator()
+    definition, _, meta = orchestrator.convert(
+        "経費を申請し、承認されたら精算し、通知する"
+    )
+
+    assert len(definition.tasks) >= 3
+    assert len(meta.get("actions", [])) >= 3
+    assert meta.get("splitter_version") == "ja_v1"

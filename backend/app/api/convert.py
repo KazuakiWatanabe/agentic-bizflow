@@ -60,6 +60,7 @@ class ConvertResponse(BaseModel):
         meta:
             retries などのメタ情報。
             token_present はAuthorizationヘッダからIDトークンの有無を示す。
+            actions と splitter_version は事前分割の結果を示す。
     """
 
     model_config = ConfigDict(extra="forbid")
