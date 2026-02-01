@@ -13,6 +13,7 @@
 - `definition` と `meta` を優先表示し、`agent_logs` は折りたたみ表示とする。
 - JSONは整形（pretty print）して表示する。
 - コンテキストは `type / viewType` を簡易表示する（ユーザー識別子は表示しない）。
+- meta には `actions` / `splitter_version` / `compound_detected` / `validator_issues` を含める。
 
 ## 設定注入
 - `public/config.js` は起動時に `public/config.js.template` から生成する。

@@ -1,7 +1,7 @@
 """
 業務文章から登場人物/操作/条件/例外/前提を抽出するReaderAgentを提供する。
 
-入出力: text(str) -> dict(entities/actions/conditions/exceptions/assumptions/splitter_version)。
+入出力: text(str) -> dict(entities/actions/conditions/exceptions/assumptions/input_text/splitter_version)。
 制約: 最終JSONを生成せず、欠落情報を黙って補完しない。
 
 Note:
@@ -47,6 +47,8 @@ class ReaderAgent:
                 例外候補の一覧（スタブ）。
             assumptions:
                 前提条件の一覧（スタブ）。
+            input_text:
+                分割前の入力文。
             splitter_version:
                 使用した分割ルールのバージョン。
 
@@ -65,6 +67,7 @@ class ReaderAgent:
                 "conditions": [],
                 "exceptions": [],
                 "assumptions": ["input is empty"],
+                "input_text": "",
                 "splitter_version": SPLITTER_VERSION,
             }
 
@@ -79,6 +82,7 @@ class ReaderAgent:
             "conditions": conditions,
             "exceptions": exceptions,
             "assumptions": assumptions,
+            "input_text": cleaned,
             "splitter_version": SPLITTER_VERSION,
         }
 

@@ -41,6 +41,10 @@ class PlannerAgent:
                 再試行フラグ。retry_issues の有無で判定する。
             actions:
                 ReaderAgent が抽出したアクション候補一覧。
+            force_task_split:
+                複合文判定などでタスク分割を強制するフラグ。
+            input_text:
+                分割前の入力文。
             role_name:
                 タスクに割り当てるロール名。
             trigger:
@@ -62,6 +66,14 @@ class PlannerAgent:
         retry_issues = reader_out.get("retry_issues", [])
         is_retry = bool(retry_issues)
         actions = reader_out.get("actions") or []
+        force_task_split = bool(reader_out.get("force_task_split"))
+        input_text = str(reader_out.get("input_text") or "")
+
+        if force_task_split and len(actions) <= 1:
+            actions = self._force_split_actions(
+                action=actions[0] if actions else "",
+                input_text=input_text,
+            )
 
         role_name = "Operator"
         tasks: List[Dict[str, Any]] = []
@@ -131,3 +143,46 @@ class PlannerAgent:
         if conditions:
             return str(conditions[0])
         return "when request is received"
+
+    def _force_split_actions(self, action: str, input_text: str) -> List[str]:
+        """強制分割時の簡易アクション候補を生成する。
+
+        Args:
+            action: 現在のアクション候補（1件想定）
+            input_text: 元の入力文
+
+        Returns:
+            強制分割したアクション候補一覧
+
+        Variables:
+            candidates:
+                強制分割で生成した候補一覧。
+            cleaned_action:
+                前後空白を除去したアクション文字列。
+            cleaned_text:
+                前後空白を除去した入力文。
+            trigger_phrase:
+                条件節として抽出したフレーズ。
+            remainder:
+                条件節を除いた残りの文。
+
+        Note:
+            - 条件節が見つかれば残りの文を追加して2件化する
+            - 分割できない場合は既存のアクションを返す
+        """
+        cleaned_action = (action or "").strip()
+        cleaned_text = (input_text or "").strip()
+        candidates: List[str] = []
+
+        if cleaned_action:
+            candidates.append(cleaned_action)
+        elif cleaned_text:
+            candidates.append(cleaned_text)
+
+        trigger_phrase = extract_trigger_phrase(candidates[0]) if candidates else ""
+        if trigger_phrase and candidates:
+            remainder = candidates[0].replace(trigger_phrase, "", 1).strip()
+            if remainder and remainder != candidates[0]:
+                candidates.append(remainder)
+
+        return candidates or ["Process request"]

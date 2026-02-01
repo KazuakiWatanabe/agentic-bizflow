@@ -73,3 +73,5 @@ def test_orchestrator_splits_tasks_from_actions() -> None:
     assert len(definition.tasks) >= 3
     assert len(meta.get("actions", [])) >= 3
     assert meta.get("splitter_version") == "ja_v1"
+    assert meta.get("compound_detected") is True
+    assert isinstance(meta.get("validator_issues"), list)

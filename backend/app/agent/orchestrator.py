@@ -89,10 +89,14 @@ class Orchestrator:
                 ValidatorAgentの出力辞書。
             issues:
                 Validatorが検出した問題点一覧。
+            validator_issue_details:
+                Validatorが検出した問題点の詳細一覧。
+            compound_detected:
+                複合文の可能性があるかどうか。
             definition:
                 生成済みの業務定義。
             meta:
-                retries / model / actions / splitter_version を含むメタ情報。
+                retries / model / actions / splitter_version / compound_detected / validator_issues を含むメタ情報。
 
         Raises:
             ValueError: リトライ上限後も issues が残る場合に発生
@@ -115,13 +119,19 @@ class Orchestrator:
             planner_out = self.planner.run(reader_out)
             agent_logs.append(self._log_planner(planner_out))
 
-            validator_out = self.validator.run(planner_out)
+            validator_out = self.validator.run(
+                planner_out,
+                input_text=text,
+                actions=reader_out.get("actions") or [],
+            )
             agent_logs.append(self._log_validator(validator_out))
 
             issues = validator_out.get("issues") or []
             if issues and retries < self.max_retries:
                 retries += 1
                 reader_out["retry_issues"] = issues
+                if "compound_text_single_task" in issues:
+                    reader_out["force_task_split"] = True
                 continue
 
             if issues:
@@ -136,11 +146,17 @@ class Orchestrator:
             validator_out=validator_out,
         )
         agent_logs.append(self._log_generator(definition))
+        validator_issue_details = validator_out.get("issue_details") or []
+        compound_detected = bool(validator_out.get("compound_detected"))
         meta = {
             "retries": retries,
             "model": "stub",
             "actions": actions,
             "splitter_version": splitter_version,
+            "compound_detected": compound_detected,
+            "validator_issues": validator_issue_details
+            if validator_issue_details
+            else issues,
         }
         return definition, agent_logs, meta
 
