@@ -1,3 +1,6 @@
+> このドキュメントは Agentic BizFlow のアーキテクチャ設計詳細です。  
+> README.md に掲載している Mermaid 図の正（Single Source of Truth）です。
+
 # Agentic BizFlow
 
 ## Project Overview（プロジェクト概要）
@@ -18,14 +21,6 @@ Agentic AI の実装例です。提出/審査に必要な要素を最小構成�
 - ルールベース前処理で task 分割の再現性を向上
 
 ## Architecture（アーキテクチャ）
-Agentic BizFlow は、単一の LLM 呼び出しではなく、
-Reader / Planner / Validator / Generator を分離した
-Agentic Pipeline を採用しています。
-
-Validator が不備や曖昧さを検出した場合、
-Planner に差し戻して再計画（Retry）を行い、
-検証を通過した結果のみを最終出力とします。
-
 ```mermaid
 flowchart TB
   UI[Frontend (LIFF)] -->|POST /api/convert| API[FastAPI]
@@ -56,8 +51,16 @@ flowchart TB
   V --> META[meta / agent_logs]
 ```
 
-📘 詳細な設計意図・Agent責務・Retry方針については
-`docs/README_architecture.md` を参照してください。
+### 責務とフローの要点
+- ReaderAgent: 入力文から actions / entities / 条件情報などを抽出する
+- PlannerAgent: actions を基に tasks を分割し、roles / trigger などの骨格を作る
+- ValidatorAgent: 不備・曖昧さ・非業務タスクを検出し、issues を返す
+- GeneratorAgent: 検証済み情報のみで最終JSONを生成する
+- Orchestrator: 実行順序・Retry 制御・ログ収集を担う
+
+Retry の意味:
+- Validator が issues を返した場合のみ Planner に差し戻して再計画する
+- 再試行回数には上限がある（無限ループ防止）
 
 ## Data Model (Output JSON)
 - `definition`: 生成された業務定義（tasks / roles / assumptions / open_questions）
@@ -159,13 +162,6 @@ agentic-bizflow/
 ├─ docs/             # 設計資料/セットアップ
 └─ AGENTS.md         # 最上位ルール
 ```
-
-## 📚 Documents
-- プロジェクト概要 / デモ: `README.md`
-- アーキテクチャ設計（SSOT）: `docs/README_architecture.md`
-- Agent 実装ルール: `AGENTS.md`
-- フロント仕様: `frontend/README_FRONTEND_SPEC.md`
-- LIFF セットアップ: `docs/LIFF_SETUP.md`
 
 ## Limitations & Next steps（制約と今後）
 - 分割はルールベース。形態素解析への拡張余地あり
