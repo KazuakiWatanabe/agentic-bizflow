@@ -120,6 +120,7 @@ jobs:
   frontend:
     name: Frontend (build)
     runs-on: ubuntu-latest
+    if: ${{ hashFiles('frontend/package.json') != '' }}
     defaults:
       run:
         working-directory: frontend
