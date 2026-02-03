@@ -14,9 +14,6 @@ jobs:
   backend:
     name: Backend (lint + test)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
 
     steps:
       - name: Checkout
@@ -26,30 +23,97 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-          cache-dependency-path: |
-            backend/requirements.txt
-            backend/requirements-dev.txt
 
-      - name: Install deps
+      - name: Debug workspace
         run: |
+          pwd
+          ls -R
+
+      - name: Install deps (auto-detect)
+        id: deps
+        shell: bash
+        run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+
+          project_dir=""
+          use_poetry="false"
+          cache_dependency_path=""
+
+          if [ -f backend/requirements-dev.txt ]; then
+            echo "Detected backend/requirements-dev.txt"
+            pip install -r backend/requirements-dev.txt
+            project_dir="backend"
+            cache_dependency_path="backend/requirements-dev.txt"
+            if [ -f backend/requirements.txt ]; then
+              pip install -r backend/requirements.txt
+            fi
+          elif [ -f backend/requirements.txt ]; then
+            echo "Detected backend/requirements.txt"
+            pip install -r backend/requirements.txt
+            project_dir="backend"
+            cache_dependency_path="backend/requirements.txt"
+          elif [ -f backend/pyproject.toml ]; then
+            echo "Detected backend/pyproject.toml"
+            project_dir="backend"
+            if [ -f backend/poetry.lock ]; then
+              use_poetry="true"
+              pip install poetry
+              poetry config virtualenvs.create false
+              (cd backend && poetry install --no-interaction)
+            else
+              pip install -e backend
+            fi
+          elif [ -f pyproject.toml ]; then
+            echo "Detected root pyproject.toml"
+            project_dir="."
+            if [ -f poetry.lock ]; then
+              use_poetry="true"
+              pip install poetry
+              poetry config virtualenvs.create false
+              poetry install --no-interaction
+            else
+              pip install -e .
+            fi
+          elif [ -f requirements-dev.txt ]; then
+            echo "Detected root requirements-dev.txt"
+            pip install -r requirements-dev.txt
+            project_dir="."
+            cache_dependency_path="requirements-dev.txt"
+            if [ -f requirements.txt ]; then
+              pip install -r requirements.txt
+            fi
+          elif [ -f requirements.txt ]; then
+            echo "Detected root requirements.txt"
+            pip install -r requirements.txt
+            project_dir="."
+            cache_dependency_path="requirements.txt"
+          else
+            echo "依存定義ファイルが見つからないため失敗しました" >&2
+            exit 1
+          fi
+
+          echo "project_dir=${project_dir}" >> "${GITHUB_OUTPUT}"
+          echo "use_poetry=${use_poetry}" >> "${GITHUB_OUTPUT}"
+          echo "cache_dependency_path=${cache_dependency_path}" >> "${GITHUB_OUTPUT}"
 
       - name: Black (format check)
+        working-directory: ${{ steps.deps.outputs.project_dir }}
         run: |
           black --check .
 
       - name: isort (import order check)
+        working-directory: ${{ steps.deps.outputs.project_dir }}
         run: |
           isort --check-only .
 
       - name: flake8 (PEP8 check)
+        working-directory: ${{ steps.deps.outputs.project_dir }}
         run: |
           flake8 .
 
       - name: Pytest
+        working-directory: ${{ steps.deps.outputs.project_dir }}
         run: |
           pytest -q
 
