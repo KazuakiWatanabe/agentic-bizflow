@@ -128,7 +128,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check frontend assets
+        id: frontend_check
+        shell: bash
+        run: |
+          if [ -f package.json ]; then
+            echo "has_frontend=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "has_frontend=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Set up Node
+        if: ${{ steps.frontend_check.outputs.has_frontend == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -136,9 +147,11 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install
+        if: ${{ steps.frontend_check.outputs.has_frontend == 'true' }}
         run: |
           npm ci
 
       - name: Build
+        if: ${{ steps.frontend_check.outputs.has_frontend == 'true' }}
         run: |
           npm run build
