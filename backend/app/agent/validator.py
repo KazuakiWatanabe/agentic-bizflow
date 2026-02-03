@@ -24,10 +24,19 @@ COMPOUND_KEYWORDS = [
     "および",
     "及び",
 ]  # 複合文判定で参照するキーワード一覧
-TRIGGER_MARKERS = ["たら", "なら", "場合", "後", "次第"]  # 条件節を示すキーワード一覧
+TRIGGER_MARKERS = [
+    "たら",
+    "なら",
+    "場合",
+    "後",
+    "次第",
+]  # 条件節を示すキーワード一覧
 
 
-def is_compound_text(input_text: str, actions: Optional[List[str]] = None) -> bool:
+def is_compound_text(
+    input_text: str,
+    actions: Optional[List[str]] = None,
+) -> bool:
     """入力文が複合文の可能性があるかを判定する。
 
     Args:
@@ -85,7 +94,9 @@ def is_non_business_task(task: Dict[str, Any]) -> bool:
     """
     name = str(task.get("name") or "")
     steps = task.get("steps") or []
-    combined = " ".join([name] + [str(step) for step in steps])
+    combined = " ".join(
+        [name] + [str(step) for step in steps],
+    )
     has_business = _contains_any(combined, BUSINESS_KEYWORDS)
     has_non_business = _contains_any(combined, NON_BUSINESS_KEYWORDS)
     return bool(has_non_business and not has_business)
@@ -113,7 +124,9 @@ def _task_requires_trigger(task: Dict[str, Any]) -> bool:
     """
     name = str(task.get("name") or "")
     steps = task.get("steps") or []
-    combined = " ".join([name] + [str(step) for step in steps])
+    combined = " ".join(
+        [name] + [str(step) for step in steps],
+    )
     return _contains_any(combined, TRIGGER_MARKERS)
 
 
@@ -218,7 +231,11 @@ class ValidatorAgent:
                     issues.append(f"missing steps in {task_id}")
                 if is_non_business_task(task):
                     non_business_tasks.append(task_id)
-                if people and _is_contact_task(task) and not task.get("recipients"):
+                # 通知/連絡タスクかどうか
+                has_contact_task = bool(people) and _is_contact_task(task)
+                # 通知先が不足しているかどうか
+                has_missing_recipient = has_contact_task and not task.get("recipients")
+                if has_missing_recipient:
                     issues.append("notification_without_recipient")
                     issue_details.append(
                         {
@@ -300,22 +317,28 @@ class ValidatorAgent:
             )
 
         if isinstance(tasks, list) and len(tasks) >= 2:
-            trigger_values = [str(task.get("trigger") or "") for task in tasks]
+            trigger_values: List[str] = []
+            for task in tasks:
+                trigger_values.append(str(task.get("trigger") or ""))
             non_empty_triggers = [value for value in trigger_values if value]
             unique_triggers = set(non_empty_triggers)
-            if len(non_empty_triggers) == len(tasks) and len(unique_triggers) == 1:
+            # 全タスクがトリガーを持つかどうか
+            all_tasks_have_trigger = len(non_empty_triggers) == len(tasks)
+            # トリガーが1種類のみかどうか
+            has_single_trigger = len(unique_triggers) == 1
+            if all_tasks_have_trigger and has_single_trigger:
                 issues.append("suspicious_global_trigger")
                 issue_details.append(
-                {
-                    "code": "suspicious_global_trigger",
-                    "message": (
-                        "trigger が全 task に同一で付与されています。"
-                        "条件に関係する task のみに付与してください。"
-                    ),
-                    "severity": "warning",
-                    "data": {"trigger": next(iter(unique_triggers))},
-                }
-            )
+                    {
+                        "code": "suspicious_global_trigger",
+                        "message": (
+                            "trigger が全 task に同一で付与されています。"
+                            "条件に関係する task のみに付与してください。"
+                        ),
+                        "severity": "warning",
+                        "data": {"trigger": next(iter(unique_triggers))},
+                    }
+                )
 
         return {
             "issues": issues,
@@ -370,5 +393,7 @@ def _is_contact_task(task: Dict[str, Any]) -> bool:
     """
     name = str(task.get("name") or "")
     steps = task.get("steps") or []
-    combined = " ".join([name] + [str(step) for step in steps])
+    combined = " ".join(
+        [name] + [str(step) for step in steps],
+    )
     return _contains_any(combined, CONTACT_KEYWORDS)

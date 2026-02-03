@@ -3,8 +3,9 @@
 
 入出力:
     text(str) -> dict(
-        entities / entities_detail / actions / actions_raw / actions_filtered_out /
-        action_filter_version / action_filter_fallback / conditions / exceptions /
+        entities / entities_detail / actions / actions_raw /
+        actions_filtered_out / action_filter_version /
+        action_filter_fallback / conditions / exceptions /
         assumptions / input_text / splitter_version
     )。
 制約: 最終JSONを生成せず、欠落情報を黙って補完しない。
@@ -65,6 +66,8 @@ class ReaderAgent:
                 前提条件の一覧（スタブ）。
             entities:
                 抽出したエンティティ名の一覧。
+            entity_names:
+                抽出した人名エンティティ名の一覧。
             entities_detail:
                 抽出したエンティティ詳細情報。
             input_text:
@@ -105,11 +108,17 @@ class ReaderAgent:
 
         entities_detail = extract_entities_ja(cleaned)
         people = entities_detail.get("people") or []
-        entity_names = [person.get("name") for person in people if person.get("name")]
+        entity_names: List[str] = []  # 人名エンティティ名の一覧
+        for person in people:
+            if person.get("name"):
+                entity_names.append(person.get("name"))
 
         actions_raw = split_actions(cleaned)
         actions_filtered = filter_business_actions(actions_raw)
-        actions_filtered_out = self._diff_actions(actions_raw, actions_filtered)
+        actions_filtered_out = self._diff_actions(
+            actions_raw,
+            actions_filtered,
+        )
         action_filter_fallback = False
         actions = actions_filtered
         if not actions and actions_raw:

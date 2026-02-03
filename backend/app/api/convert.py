@@ -59,10 +59,11 @@ class ConvertResponse(BaseModel):
             各Agentの要約ログ一覧。
         meta:
             retries などのメタ情報。
-            token_present は Authorization ヘッダから ID トークンの有無を示す。
+            token_present は Authorization ヘッダから
+            ID トークンの有無を示す。
             actions と splitter_version は事前分割の結果を示す。
-            actions_raw / actions_filtered_out / action_filter_version /
-            action_filter_fallback も含む。
+            actions_raw / actions_filtered_out /
+            action_filter_version / action_filter_fallback も含む。
             entities / role_inference も含め、推定根拠を残す。
             compound_detected と validator_issues は検証結果の補助情報を示す。
     """
@@ -150,9 +151,15 @@ def convert(
     try:
         definition, agent_logs, meta = orchestrator.convert(text)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="validation failed") from exc
+        raise HTTPException(
+            status_code=422,
+            detail="validation failed",
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="internal server error") from exc
+        raise HTTPException(
+            status_code=500,
+            detail="internal server error",
+        ) from exc
 
     token_present = _is_bearer_token_present(authorization)
     if token_present:

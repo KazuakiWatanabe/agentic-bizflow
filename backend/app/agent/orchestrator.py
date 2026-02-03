@@ -109,12 +109,15 @@ class Orchestrator:
                 失敗として扱う issue コード一覧。
             only_warnings:
                 warning のみで構成されているかどうかのフラグ。
+            remaining:
+                再試行後も残った issue の一覧。
             definition:
                 生成済みの業務定義。
             meta:
-                retries / model / actions / actions_raw / actions_filtered_out /
-                action_filter_version / action_filter_fallback / entities /
-                role_inference / splitter_version / compound_detected /
+                retries / model / actions / actions_raw /
+                actions_filtered_out / action_filter_version /
+                action_filter_fallback / entities / role_inference /
+                splitter_version / compound_detected /
                 validator_issues を含むメタ情報。
 
         Raises:
@@ -132,7 +135,9 @@ class Orchestrator:
         actions = reader_out.get("actions") or []
         actions_raw = reader_out.get("actions_raw") or []
         actions_filtered_out = reader_out.get("actions_filtered_out") or []
-        action_filter_version = reader_out.get("action_filter_version") or "unknown"
+        action_filter_version = reader_out.get("action_filter_version")
+        if not action_filter_version:
+            action_filter_version = "unknown"
         action_filter_fallback = bool(reader_out.get("action_filter_fallback"))
         entities = reader_out.get("entities_detail") or {}
         splitter_version = reader_out.get("splitter_version") or "unknown"
@@ -178,11 +183,14 @@ class Orchestrator:
                     continue
 
             if issues:
-                remaining = [
-                    issue for issue in issues if issue not in warning_issue_codes
-                ]
+                remaining: List[str] = []
+                for issue in issues:
+                    if issue not in warning_issue_codes:
+                        remaining.append(issue)
                 if remaining:
-                    raise ValueError(f"Validation failed after retries: {remaining}")
+                    raise ValueError(
+                        f"Validation failed after retries: {remaining}",
+                    )
 
             break
 
@@ -230,6 +238,8 @@ class Orchestrator:
                 Readerで抽出した操作の件数。
             people:
                 抽出した人名エンティティの件数。
+            summary:
+                Readerの要約文字列。
 
         Raises:
             None
@@ -237,9 +247,11 @@ class Orchestrator:
         entities = len(reader_out.get("entities") or [])
         actions = len(reader_out.get("actions") or [])
         people = len(reader_out.get("entities_detail", {}).get("people") or [])
+        summary = f"entities={entities} actions={actions}"
+        summary += f" people={people}"
         return {
             "step": "reader",
-            "summary": f"entities={entities} actions={actions} people={people}",
+            "summary": summary,
         }
 
     def _log_planner(self, planner_out: Dict[str, Any]) -> Dict[str, Any]:
@@ -318,11 +330,14 @@ class Orchestrator:
         Variables:
             definition:
                 生成済みの業務定義。
+            summary:
+                Generatorの要約文字列。
 
         Raises:
             None
         """
-        summary = f"tasks={len(definition.tasks)} roles={len(definition.roles)}"
+        summary = f"tasks={len(definition.tasks)}"
+        summary += f" roles={len(definition.roles)}"
         return {
             "step": "generator",
             "summary": summary,
