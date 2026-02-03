@@ -112,8 +112,9 @@ class Orchestrator:
             definition:
                 生成済みの業務定義。
             meta:
-                retries / model / actions / actions_raw / actions_filtered_out / action_filter_version /
-                action_filter_fallback / entities / role_inference / splitter_version / compound_detected /
+                retries / model / actions / actions_raw / actions_filtered_out /
+                action_filter_version / action_filter_fallback / entities /
+                role_inference / splitter_version / compound_detected /
                 validator_issues を含むメタ情報。
 
         Raises:
@@ -264,9 +265,13 @@ class Orchestrator:
         tasks = planner_out.get("tasks") or []
         roles = planner_out.get("roles") or []
         role_inference = planner_out.get("role_inference") or []
+        summary = (
+            f"tasks={len(tasks)} roles={len(roles)} "
+            f"role_inference={len(role_inference)}"
+        )
         return {
             "step": "planner",
-            "summary": f"tasks={len(tasks)} roles={len(roles)} role_inference={len(role_inference)}",
+            "summary": summary,
         }
 
     def _log_validator(self, validator_out: Dict[str, Any]) -> Dict[str, Any]:
@@ -317,7 +322,8 @@ class Orchestrator:
         Raises:
             None
         """
+        summary = f"tasks={len(definition.tasks)} roles={len(definition.roles)}"
         return {
             "step": "generator",
-            "summary": f"tasks={len(definition.tasks)} roles={len(definition.roles)}",
+            "summary": summary,
         }

@@ -223,7 +223,10 @@ class ValidatorAgent:
                     issue_details.append(
                         {
                             "code": "notification_without_recipient",
-                            "message": "通知/連絡タスクに通知先が設定されていません。文中の人名 entity を recipients に設定してください。",
+                            "message": (
+                                "通知/連絡タスクに通知先が設定されていません。"
+                                "文中の人名 entity を recipients に設定してください。"
+                            ),
                             "severity": "warning",
                             "data": {"task_id": task_id},
                         }
@@ -244,7 +247,10 @@ class ValidatorAgent:
             issue_details.append(
                 {
                     "code": "non_business_task_detected",
-                    "message": "業務動詞を含まない可能性のある task が含まれています。挨拶/雑談は tasks に含めず除外してください。",
+                    "message": (
+                        "業務動詞を含まない可能性のある task が含まれています。"
+                        "挨拶/雑談は tasks に含めず除外してください。"
+                    ),
                     "severity": "warning",
                     "data": {
                         "tasks": non_business_tasks,
@@ -259,7 +265,10 @@ class ValidatorAgent:
             issue_details.append(
                 {
                     "code": "role_not_inferred",
-                    "message": "複数タスクなのに role が単一です。Applicant/Approver/Accounting への割当を検討してください。",
+                    "message": (
+                        "複数タスクなのに role が単一です。"
+                        "Applicant/Approver/Accounting への割当を検討してください。"
+                    ),
                     "severity": "warning",
                     "data": {"role": next(iter(unique_roles))},
                 }
@@ -277,7 +286,10 @@ class ValidatorAgent:
             issue_details.append(
                 {
                     "code": "compound_text_single_task",
-                    "message": "入力文が複合文の可能性がありますが tasks が1件です。タスク分割を再検討してください。",
+                    "message": (
+                        "入力文が複合文の可能性がありますが tasks が1件です。"
+                        "タスク分割を再検討してください。"
+                    ),
                     "severity": "error",
                     "data": {
                         "actions_count": len(actions or []),
@@ -294,13 +306,16 @@ class ValidatorAgent:
             if len(non_empty_triggers) == len(tasks) and len(unique_triggers) == 1:
                 issues.append("suspicious_global_trigger")
                 issue_details.append(
-                    {
-                        "code": "suspicious_global_trigger",
-                        "message": "trigger が全 task に同一で付与されています。条件に関係する task のみに付与してください。",
-                        "severity": "warning",
-                        "data": {"trigger": next(iter(unique_triggers))},
-                    }
-                )
+                {
+                    "code": "suspicious_global_trigger",
+                    "message": (
+                        "trigger が全 task に同一で付与されています。"
+                        "条件に関係する task のみに付与してください。"
+                    ),
+                    "severity": "warning",
+                    "data": {"trigger": next(iter(unique_triggers))},
+                }
+            )
 
         return {
             "issues": issues,

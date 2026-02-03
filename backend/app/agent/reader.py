@@ -1,7 +1,12 @@
 """
 業務文章から登場人物/操作/条件/例外/前提を抽出するReaderAgentを提供する。
 
-入出力: text(str) -> dict(entities/entities_detail/actions/actions_raw/actions_filtered_out/action_filter_version/action_filter_fallback/conditions/exceptions/assumptions/input_text/splitter_version)。
+入出力:
+    text(str) -> dict(
+        entities / entities_detail / actions / actions_raw / actions_filtered_out /
+        action_filter_version / action_filter_fallback / conditions / exceptions /
+        assumptions / input_text / splitter_version
+    )。
 制約: 最終JSONを生成せず、欠落情報を黙って補完しない。
 
 Note:
