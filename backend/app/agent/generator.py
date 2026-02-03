@@ -10,7 +10,12 @@ Note:
 
 from typing import Any, Dict, List
 
-from .schemas import BusinessDefinition, RecipientDefinition, RoleDefinition, TaskDefinition
+from .schemas import (
+    BusinessDefinition,
+    RecipientDefinition,
+    RoleDefinition,
+    TaskDefinition,
+)
 
 
 class GeneratorAgent:

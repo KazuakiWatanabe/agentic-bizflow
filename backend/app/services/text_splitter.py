@@ -147,9 +147,7 @@ def extract_trigger_phrase(action: str) -> str:
     cleaned = (action or "").strip()
     if not cleaned:
         return ""
-    marker_positions = [
-        (marker, cleaned.find(marker)) for marker in CONDITION_MARKERS
-    ]
+    marker_positions = [(marker, cleaned.find(marker)) for marker in CONDITION_MARKERS]
     marker_positions = [(marker, pos) for marker, pos in marker_positions if pos != -1]
     if not marker_positions:
         return ""

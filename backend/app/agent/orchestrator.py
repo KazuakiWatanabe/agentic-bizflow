@@ -207,9 +207,9 @@ class Orchestrator:
             "role_inference": role_inference,
             "splitter_version": splitter_version,
             "compound_detected": compound_detected,
-            "validator_issues": validator_issue_details
-            if validator_issue_details
-            else issues,
+            "validator_issues": (
+                validator_issue_details if validator_issue_details else issues
+            ),
         }
         return definition, agent_logs, meta
 

@@ -86,9 +86,7 @@ class PlannerAgent:
         actions_raw = reader_out.get("actions_raw") or actions
         force_task_split = bool(reader_out.get("force_task_split"))
         avoid_non_business = bool(reader_out.get("avoid_non_business")) and is_retry
-        entities_people = (
-            reader_out.get("entities_detail", {}).get("people") or []
-        )
+        entities_people = reader_out.get("entities_detail", {}).get("people") or []
         input_text = str(reader_out.get("input_text") or "")
 
         if avoid_non_business and actions_raw:
@@ -256,9 +254,7 @@ class PlannerAgent:
             name = str(person.get("name") or "")
             surface = str(person.get("surface") or "")
             if (surface and surface in action) or (name and name in action):
-                recipients.append(
-                    {"type": "person", "name": name, "surface": surface}
-                )
+                recipients.append({"type": "person", "name": name, "surface": surface})
         return recipients
 
     def _expand_actions_for_roles(
