@@ -387,7 +387,8 @@ class PlannerAgent:
             "出力は必ず JSON のみとし、余計な説明は付けないでください。\n"
             "抽出語句は input_text に含まれる表現のみ使用してください。\n"
             "role は Applicant / Approver / Accounting / Operator のいずれか。\n"
-            '出力形式: {"actions": ["..."], "role_hints": [{"action": "...", "role": "..."}]}\n'
+            "出力形式: "
+            '{"actions": ["..."], "role_hints": [{"action": "...", "role": "..."}]}\n'
             "input_text:\n"
             f"{input_text}\n"
             "参考 actions:\n"
