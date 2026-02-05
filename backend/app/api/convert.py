@@ -66,6 +66,7 @@ class ConvertResponse(BaseModel):
             action_filter_version / action_filter_fallback も含む。
             entities / role_inference も含め、推定根拠を残す。
             compound_detected と validator_issues は検証結果の補助情報を示す。
+            llm は Reader/Planner/Generator の LLM利用状況（enabled/used/model/error 等）を示す。
     """
 
     model_config = ConfigDict(extra="forbid")
