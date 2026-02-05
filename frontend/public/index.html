@@ -417,6 +417,10 @@
             <h3>メタ</h3>
             <pre id="meta-output">レスポンス待ち。</pre>
           </div>
+          <div class="output-card">
+            <h3>LLM証跡</h3>
+            <pre id="llm-output">レスポンス待ち。</pre>
+          </div>
         </div>
         <details class="output-details" id="logs-details">
           <summary>Agentログ（クリックで展開）</summary>
@@ -449,6 +453,7 @@
       const definitionOutput = document.getElementById("definition-output");
       const logsOutput = document.getElementById("logs-output");
       const metaOutput = document.getElementById("meta-output");
+      const llmOutput = document.getElementById("llm-output");
 
       const sampleText = "経費を申請し、承認されたら精算する";
 
@@ -662,6 +667,47 @@
         definitionOutput.textContent = "レスポンス待ち。";
         logsOutput.textContent = "レスポンス待ち。";
         metaOutput.textContent = "レスポンス待ち。";
+        llmOutput.textContent = "レスポンス待ち。";
+      };
+
+      const formatLlmEntry = (label, entry) => {
+        if (!entry || typeof entry !== "object") {
+          return `${label}: no data`;
+        }
+        const enabled = entry.enabled === true;
+        const used = entry.used === true;
+        const status = enabled ? (used ? "used" : "enabled") : "disabled";
+        const model = entry.model ? `model=${entry.model}` : "model=unknown";
+        const provider = entry.provider
+          ? `provider=${entry.provider}`
+          : "provider=unknown";
+        const error = entry.error ? `error=${entry.error}` : "error=none";
+        const promptVersion = entry.prompt_version
+          ? `prompt=${entry.prompt_version}`
+          : "prompt=unknown";
+        return `${label}: ${status} | ${provider} | ${model} | ${promptVersion} | ${error}`;
+      };
+
+      const renderLlmTrace = (meta) => {
+        if (!llmOutput) {
+          return;
+        }
+        const llm = meta && meta.llm ? meta.llm : null;
+        if (!llm || typeof llm !== "object") {
+          llmOutput.textContent = "LLM情報なし";
+          return;
+        }
+        const entries = [];
+        const ordered = ["reader", "planner", "generator"];
+        ordered.forEach((key) => {
+          entries.push(formatLlmEntry(key, llm[key]));
+        });
+        Object.keys(llm)
+          .filter((key) => !ordered.includes(key))
+          .forEach((key) => {
+            entries.push(formatLlmEntry(key, llm[key]));
+          });
+        llmOutput.textContent = entries.join("\n");
       };
 
       const handleConvert = async () => {
@@ -710,6 +756,7 @@
           renderJson(definitionOutput, payload.definition, {});
           renderJson(logsOutput, payload.agent_logs, []);
           renderJson(metaOutput, payload.meta, {});
+          renderLlmTrace(payload.meta);
           setRequestState("成功");
           updateLiffStatus();
         } catch (err) {

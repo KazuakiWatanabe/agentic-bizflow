@@ -113,12 +113,14 @@ class Orchestrator:
                 再試行後も残った issue の一覧。
             definition:
                 生成済みの業務定義。
+            llm_usage:
+                Reader/Planner/Generator が記録したLLM利用状況。
             meta:
                 retries / model / actions / actions_raw /
                 actions_filtered_out / action_filter_version /
                 action_filter_fallback / entities / role_inference /
                 splitter_version / compound_detected /
-                validator_issues を含むメタ情報。
+                validator_issues / llm を含むメタ情報。
 
         Raises:
             ValueError: リトライ上限後も issues が残る場合に発生
@@ -201,6 +203,11 @@ class Orchestrator:
             validator_out=validator_out,
         )
         agent_logs.append(self._log_generator(definition))
+        llm_usage = {
+            "reader": self.reader.get_last_llm_usage(),
+            "planner": self.planner.get_last_llm_usage(),
+            "generator": self.generator.get_last_llm_usage(),
+        }
         validator_issue_details = validator_out.get("issue_details") or []
         compound_detected = bool(validator_out.get("compound_detected"))
         role_inference = planner_out.get("role_inference") or []
@@ -219,6 +226,7 @@ class Orchestrator:
             "validator_issues": (
                 validator_issue_details if validator_issue_details else issues
             ),
+            "llm": llm_usage,
         }
         return definition, agent_logs, meta
 

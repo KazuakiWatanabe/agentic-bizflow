@@ -13,7 +13,7 @@ Agentic Architecture 実装例**です。Google Cloud Japan AI Hackathon 提出�
 - 人が読めるだけの業務文書を、**Pydanticで検証可能な業務定義JSON**へ変換する。
 - 単発LLMではなく、**Reader/Planner/Validator/Generator**に分割し、検証と再試行で品質を担保する。
 - **Validation & Retry Loop が中心設計**。曖昧・欠落を検出し、必要な場合のみ再計画する。
-- Google Cloud（Cloud Run + Vertex AI/Gemini想定）での実運用を前提にした構成。
+- Google Cloud（Cloud Run）で動作し、`LLM_ENABLED=1` で Vertex AI（Gemini）を実呼び出しする。
 
 ## 2. Problem（なぜ必要か）
 
@@ -167,12 +167,21 @@ docker run --rm -p 8081:8080 \
   agentic-bizflow-frontend
 ```
 
+## 9.5 Gemini/Vertex AI 呼び出し（任意）
+
+- `LLM_ENABLED=1` を設定すると、Reader/Planner/Generator が Vertex AI（Gemini）を実呼び出しし、
+  `actions`/`roles` の補助推定や `title` / `overview` を生成します（失敗時は既定値にフォールバック）。
+- 必須: `GCP_PROJECT_ID`
+- 任意: `GCP_LOCATION`, `GEMINI_MODEL`, `LLM_PROVIDER=vertex`
+- 任意: `LLM_FEATURES=reader,planner,generator` を設定すると利用箇所を絞れます。
+- `meta.llm` に Reader/Planner/Generator ごとの利用状況が返ります。
+
 ## 10. デプロイ構成（Google Cloud Run）
 
 ### 前提
 
 - Cloud Run に backend / frontend を別サービスとしてデプロイ
-- Vertex AI（Gemini）利用時は `GCP_PROJECT_ID` が必須
+- Vertex AI（Gemini）利用時は `GCP_PROJECT_ID` と `LLM_ENABLED=1` が必須
 
 ### Backend（Cloud Run）
 
@@ -181,7 +190,7 @@ gcloud run deploy <backend-service> \
   --source=./backend \
   --region=<region> \
   --allow-unauthenticated \
-  --set-env-vars "GCP_PROJECT_ID=<project-id>,GCP_LOCATION=<region>,GEMINI_MODEL=<model>"
+  --set-env-vars "GCP_PROJECT_ID=<project-id>,GCP_LOCATION=<region>,GEMINI_MODEL=<model>,LLM_ENABLED=1,LLM_PROVIDER=vertex"
 ```
 
 ### Frontend（Cloud Run）

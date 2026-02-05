@@ -14,6 +14,7 @@ Agentic AI の実装例です。提出/審査に必要な要素を最小構成�
 - 複合文を分割し、非業務的な雑談を除外
 - Validator で不備を検出し、必要に応じて再計画
 - Pydantic スキーマで厳格に出力を検証
+- LLM有効時は Vertex AI（Gemini）で actions/roles や title/overview を補助生成
 - LIFF向け1画面UIで結果を可視化
 
 ## Why it’s agentic / key idea（Agenticである理由）
@@ -144,7 +145,9 @@ docker run --rm -p 8081:8080 \
 
 Backend:
 
-- 環境変数: `GCP_PROJECT_ID`, `GCP_LOCATION`, `GEMINI_MODEL`（任意）, `CORS_ALLOW_ORIGINS`（任意）
+- 環境変数: `GCP_PROJECT_ID`, `GCP_LOCATION`, `GEMINI_MODEL`（任意）,
+  `LLM_ENABLED`（任意）, `LLM_PROVIDER`（任意）, `LLM_FEATURES`（任意）,
+  `CORS_ALLOW_ORIGINS`（任意）
 - Vertex AI 利用時はサービスアカウントに権限付与が必要
 
 Frontend:
