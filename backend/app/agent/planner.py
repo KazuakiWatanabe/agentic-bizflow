@@ -131,11 +131,9 @@ class PlannerAgent:
                 input_text=input_text,
             )
 
-        llm_actions, llm_role_hints, llm_usage = (
-            self._maybe_refine_with_llm(
-                input_text=input_text,
-                actions=actions,
-            )
+        llm_actions, llm_role_hints, llm_usage = self._maybe_refine_with_llm(
+            input_text=input_text,
+            actions=actions,
         )
         self._last_llm_usage = llm_usage
         if llm_actions:

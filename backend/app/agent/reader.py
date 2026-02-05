@@ -158,12 +158,10 @@ class ReaderAgent:
 
         conditions = self._extract_conditions(actions)
 
-        llm_actions, llm_conditions, llm_usage = (
-            self._maybe_enhance_actions_with_llm(
-                input_text=cleaned,
-                actions=actions,
-                conditions=conditions,
-            )
+        llm_actions, llm_conditions, llm_usage = self._maybe_enhance_actions_with_llm(
+            input_text=cleaned,
+            actions=actions,
+            conditions=conditions,
         )
         self._last_llm_usage = llm_usage
 
