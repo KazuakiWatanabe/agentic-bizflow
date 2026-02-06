@@ -1,60 +1,22 @@
 # Agentic BizFlow
 
-## 0. カバー / 冒頭メッセージ
+## 1. タイトル & 概要
 
-Agentic BizFlow は、**実業務の自然文手順を「実行可能な業務定義(JSON)」へ変換するための
-Agentic Architecture 実装例**です。Google Cloud Japan AI Hackathon 提出用に、
-短時間で設計意図と成熟度が伝わる形に整理しています。
+自然文の業務手順を、実行可能な業務定義（JSON）に変換する Agentic Architecture 実装例です。
 
-このREADMEは**プロンプトのデモではなく、検証・再試行を中核に据えた設計思想**を説明します。
+## 2. 解決したい課題
 
-## 1. TL;DR（30秒概要）
+企業の業務手順は自然文で記載されることが多く、解釈が担当者依存になりやすいため、曖昧さ・属人化・自動化困難が同時に発生します。  
+この状態は、企業システムでの再利用性や監査可能性を下げ、運用品質のばらつきを生みます。
 
-- 人が読めるだけの業務文書を、**Pydanticで検証可能な業務定義JSON**へ変換する。
-- 単発LLMではなく、**Reader/Planner/Validator/Generator**に分割し、検証と再試行で品質を担保する。
-- **Validation & Retry Loop が中心設計**。曖昧・欠落を検出し、必要な場合のみ再計画する。
-- Google Cloud（Cloud Run）で動作し、`LLM_ENABLED=1` で Vertex AI（Gemini）を実呼び出しする。
+## 3. ソリューション概要
 
-## 2. Problem（なぜ必要か）
+Agentic BizFlow は単一プロンプトで一括生成する方式ではなく、Reader → Planner → Generator の段階処理で意味を構造化します。  
+さらに Validator による検証と差し戻しを組み込み、自然文から実行可能な業務定義（JSON）へ変換します。
 
-業務マニュアル、引き継ぎ資料、Notion、Slackには、**人が読めば分かるがシステムは実行できない**
-自然文が大量に存在します。
+## 4. アーキテクチャ概要
 
-- 業務知識が属人化し、運用がブラックボックス化する
-- 手順の抜け漏れや例外条件が見落とされやすい
-- システム化に必要な構造化コストが高い
-
-このプロジェクトは、**自然文を構造化し、検証可能な業務定義へ変換**するための
-アーキテクチャを提示します。
-
-## 3. Why Agentic Architecture
-
-単発のLLM呼び出しでは、**「構造化」「抜け漏れ検出」「再修正」**を同時に満たすのが難しいため、
-以下の理由で Agentic Architecture を採用しています。
-
-- **役割分担による責務の明確化**（抽出/分解/検証/生成を分離）
-- **Validator による失敗判定**で品質基準を明示
-- **Retry Loop による改善**で不確実性を吸収
-- **Pydantic 検証**で出力の決定性と機械可読性を担保
-
-## 4. システム概要（Input / Output）
-
-### Input
-
-- 日本語の業務文章（マニュアル、引き継ぎ、チャットログ等）
-
-### Output
-
-- BusinessDefinition JSON（tasks / roles / assumptions / open_questions）
-- meta（リトライ回数・抽出結果・推定結果など）
-- agent_logs（各 Agent の要約ログ）
-
-※ 本システムは**業務フローの実行エンジンではなく**、実行可能な定義を生成する設計です。
-
-## 5. アーキテクチャ（図＋説明）
-
-Reader → Planner → Validator → Generator の順で処理し、
-Validator が issues を返した場合のみ再試行します。
+バックエンドは Cloud Run 上で動作し、各エージェントが実行時に Vertex AI（Gemini）を呼び出して、業務定義 JSON と実行メタ情報を返します。
 
 ```mermaid
 flowchart TB
@@ -86,140 +48,43 @@ flowchart TB
   V --> META[meta and agent logs]
 ```
 
-設計の詳細は `docs/README_architecture.md` に集約しています。
+設計補足は `docs/README_architecture.md` に整理しています。
 
-## 6. 各 Agent の役割
+## 5. Agentic Flow の説明
 
-- **ReaderAgent**: 人物/操作/条件/例外/前提を抽出する
-- **PlannerAgent**: 抽出結果をタスク単位に分解し構造化する
-- **ValidatorAgent**: 抜け漏れ・曖昧さ・矛盾を検出し失敗判定する
-- **GeneratorAgent**: 検証済み情報のみから業務定義JSONを生成する
-- **Orchestrator**: 実行順序とRetry制御、ログ収集を担当する
+- Reader: 業務文を読解し、登場人物・操作・条件などの意味構造を抽出します。
+- Planner: 抽出結果をもとに、役割、手順、承認に関わるタスク構造を推論します。
+- Generator: 検証済みの情報のみを使って実行可能な業務定義（JSON）を生成します。
+- Validator: `issues` を返した場合は Planner に差し戻し、再計画後に再検証します。
 
-## 7. Validation & Retry Loop
+上記エージェントは実行時に Vertex AI（Gemini）を呼び出して処理します。
 
-品質を担保するための中核設計です。
+## 6. LLM / Vertex AI 利用
 
-- **Validator が issues を返した場合のみ再試行**する
-- 再試行では Reader/Planner に制約を追加し、**欠落や曖昧さの補正を試みる**
-- **最大2回**まで再試行（警告のみの場合は早期に通過する設計）
-- Validation 通過後のみ Generator を実行
+- Provider: Vertex AI
+- Model: Gemini 2.0 Flash
+- 実行環境: Cloud Run
+- `meta.llm.reader.used` / `meta.llm.planner.used` / `meta.llm.generator.used` が `true` となる実行パスで動作します。
+- モックやスタブではなく、Vertex AI への実呼び出しです。
 
-## 8. 入出力例
+## 7. デモ例
 
-### 入力例（自然文）
+入力例: 「申請者が申請書を提出し、上長が確認する。不備があれば差し戻し、問題なければ経理へ回付する。」  
+出力では、役割（申請者・上長・経理）、手順、条件分岐、通知先を持つ業務定義構造が生成されます。
 
-```text
-申請者は申請フォームを提出し、上長が内容を確認する。
-不備があれば差し戻し、なければ経理へ回す。
-```
+## 8. 信頼性・設計上の工夫
 
-### 出力例（抜粋）
+- LLM 呼び出しに失敗した場合は、Reader/Planner は抽出済み情報で継続し、Generator は既定値へフォールバックします。
+- Validator が `issues` を検出した場合のみ再試行し、上限付きの制御で安定動作させます。
+- 最終出力は Pydantic スキーマ検証を通すため、業務定義 JSON の構造破綻を防止できます。
 
-```json
-{
-  "definition": {
-    "title": "申請フロー",
-    "overview": "申請から経理送付までの手順",
-    "tasks": [
-      {
-        "id": "task_1",
-        "name": "申請フォームを提出する",
-        "role": "申請者",
-        "trigger": "",
-        "steps": ["申請フォームを提出する"],
-        "exception_handling": ["不備があれば差し戻す"],
-        "notifications": [],
-        "recipients": []
-      }
-    ],
-    "roles": [{ "name": "申請者", "responsibilities": ["申請フォーム提出"] }],
-    "assumptions": [],
-    "open_questions": []
-  },
-  "meta": {
-    "retries": 0,
-    "splitter_version": "ja_v1",
-    "action_filter_version": "biz_v1"
-  },
-  "agent_logs": [{ "step": "reader", "summary": "..." }]
-}
-```
+## 9. ハッカソンとの関連
 
-## 9. Quick Start
+本プロジェクトは Google Cloud Japan AI Hackathon Vol.4 向けに作成しました。  
+Cloud Run と Vertex AI（Gemini）を用いて、企業業務への適用を前提に設計しています。
 
-### Backend（local）
+## 10. 今後の拡張
 
-```sh
-cd backend
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8080
-```
-
-### Frontend（optional, local）
-
-```sh
-cd frontend
-docker build -t agentic-bizflow-frontend .
-docker run --rm -p 8081:8080 \
-  -e LIFF_ID="<liff-id>" \
-  -e BACKEND_BASE_URL="http://localhost:8080" \
-  agentic-bizflow-frontend
-```
-
-## 9.5 Gemini/Vertex AI 呼び出し（任意）
-
-- `LLM_ENABLED=1` を設定すると、Reader/Planner/Generator が Vertex AI（Gemini）を実呼び出しし、
-  `actions`/`roles` の補助推定や `title` / `overview` を生成します（失敗時は既定値にフォールバック）。
-- 必須: `GCP_PROJECT_ID`
-- 任意: `GCP_LOCATION`, `GEMINI_MODEL`, `LLM_PROVIDER=vertex`
-- 任意: `LLM_FEATURES=reader,planner,generator` を設定すると利用箇所を絞れます。
-- `meta.llm` に Reader/Planner/Generator ごとの利用状況が返ります。
-
-## 10. デプロイ構成（Google Cloud Run）
-
-### 前提
-
-- Cloud Run に backend / frontend を別サービスとしてデプロイ
-- Vertex AI（Gemini）利用時は `GCP_PROJECT_ID` と `LLM_ENABLED=1` が必須
-
-### Backend（Cloud Run）
-
-```sh
-gcloud run deploy <backend-service> \
-  --source=./backend \
-  --region=<region> \
-  --allow-unauthenticated \
-  --set-env-vars "GCP_PROJECT_ID=<project-id>,GCP_LOCATION=<region>,GEMINI_MODEL=<model>,LLM_ENABLED=1,LLM_PROVIDER=vertex"
-```
-
-### Frontend（Cloud Run）
-
-```sh
-gcloud run deploy <frontend-service> \
-  --source=./frontend \
-  --region=<region> \
-  --allow-unauthenticated \
-  --set-env-vars "LIFF_ID=<liff-id>,BACKEND_BASE_URL=<backend-url>"
-```
-
-## 11. 対象外・制約事項
-
-- **BPMN実行エンジンではない**（業務定義の生成までが範囲）
-- 分割はルールベースであり、完全な意味理解は保証しない
-- Role推定はヒューリスティックで、業務別ルールの拡張が必要
-- IDトークンの署名検証は未実装（デモ/検証優先）
-- LLM出力の揺らぎは Validation/Retry で吸収する設計
-
-## 12. 今後の展望
-
-- 形態素解析やドメイン辞書による抽出精度向上
-- 業務ドメイン別の検証ルール追加
-- 評価指標（正確性/網羅性）と継続改善ループ
-- UI/運用フローへの統合（Human-in-the-loop）
-
-## 13. なぜこれが重要か（まとめ）
-
-実業務の自動化で本当に難しいのは、**入力の曖昧さと品質保証**です。
-Agentic BizFlow は、**検証と再試行を中心に据えた設計**によって、
-自然文から信頼できる業務定義を生成し、将来の自動化や運用統合への土台を提供します。
+- 稟議・承認フローの高度化
+- ERP / 会計システム連携
+- 社内業務自動化への展開
