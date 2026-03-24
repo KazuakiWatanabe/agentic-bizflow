@@ -2,21 +2,58 @@
 
 Agentic BizFlow ― 最上位ルール定義書（日本語）
 
-本ドキュメントは、本リポジトリに関わる **すべてのAI（Codex等）と人間**が遵守すべき最上位ルールです。  
+本ドキュメントは、本リポジトリに関わる **すべてのAI（Claude Code 等）と人間**が遵守すべき最上位ルールです。
 README や設計資料よりも **AGENTS.md を優先**します。
+矛盾がある場合は、常に本ファイルを優先してください。
+**作業開始前に必ず全セクションを読むこと。**
+
+---
+
+## 0. このファイルの役割
+
+AGENTS.md は、リポジトリ全体に対する **恒久ルール・判断基準・禁止事項** を定義するファイルです。
+詳細な作業手順や実行コマンド、個別機能の実装指示は下位ドキュメントへ委譲します。
+
+### 下位ドキュメントの責務
+
+- **CLAUDE.md**
+  Claude Code 向けの実務運用ガイド。作業開始時の参照順、コマンド例、現在フェーズの進め方を定義する。
+- **task/*.md**
+  機能単位の具体的タスク指示を書く。テストタスクの設定項目もここに記載する。
+- **docs/*.md**
+  設計書・アーキテクチャ補足。フェーズ固有の設計詳細はここに置く。
+
+**AGENTS.md に特定フェーズの実装詳細やコンポーネント名を書き込みすぎないこと。**
+長期的に残したいルールだけを保持してください。
+
+### 参照優先順位
+
+```text
+AGENTS.md（最上位ルール）
+  ↓
+CLAUDE.md（実務運用ガイド）
+  ↓
+task/*.md（個別タスク指示）
+  ↓
+docs/*.md（設計参照）
+  ↓
+README.md
+```
 
 ---
 
 ## 1. プロジェクトの目的
 
-本プロジェクトは、業務マニュアル・引き継ぎ資料・Notion・Slack 等に書かれた  
+本プロジェクトは、業務マニュアル・引き継ぎ資料・Notion・Slack 等に書かれた
 **「人が読めば分かるが、システムは実行できない自然文」**を対象に、
 
-- AIが業務内容を理解し
+- AI が業務内容を理解し
 - 構造化・分解・検証を行い
 - **実行可能な業務定義（JSON）**として出力する
 
 **Agentic AI の実装例**を提示することを目的とします。
+
+将来的には、業務定義の生成だけでなく、実行計画の生成・dry-run・承認付き実行への拡張も視野に入れます。
 
 ---
 
@@ -34,355 +71,287 @@ README や設計資料よりも **AGENTS.md を優先**します。
 
 ## 3. Agent 構成（責務定義）
 
-- **ReaderAgent**  
-  業務文章を読み取り、登場人物・操作・条件・例外・前提を抽出する
+| Agent | 責務 |
+|---|---|
+| **ReaderAgent** | 業務文章を読み取り、登場人物・操作・条件・例外・前提を抽出する |
+| **PlannerAgent** | 抽出結果を基に、業務を実行可能なタスク単位に分解する |
+| **ValidatorAgent** | 抜け漏れ・曖昧さ・矛盾を検出し、失敗判定を行う |
+| **GeneratorAgent** | 検証済み情報のみを用いて、業務定義 JSON を生成する |
+| **Orchestrator** | Agent 実行順序・Retry 制御・ログ収集を担当する |
 
-- **PlannerAgent**  
-  抽出結果を基に、業務を実行可能なタスク単位に分解する
-
-- **ValidatorAgent**  
-  抜け漏れ・曖昧さ・矛盾を検出し、失敗判定を行う
-
-- **GeneratorAgent**  
-  検証済み情報のみを用いて、業務定義 JSON を生成する
-
-- **Orchestrator**  
-  Agent 実行順序・Retry 制御・ログ収集を担当する
+Agent 構成の追加・変更が必要な場合は、本セクションを更新してから実装に入ること。
 
 ---
 
-## 4. 日本語コメント（docstring）記載ルール【必須】
+## 4. 設計上の不変原則
 
-本リポジトリで作成・更新する **すべての Python ファイル**は、以下①〜④を **日本語で必ず記載**してください。  
+以下はフェーズが変わっても維持すべき原則です。
+
+### 4.1 Agent 層と実行層を分離する
+
+業務定義の生成（Agent 層）と、外部システムへの実行・連携（実行層）は、責務として明確に分離する。
+
+- Agent 層は業務定義 JSON の生成に集中する
+- 外部 API の呼び出し、副作用を伴う処理は Agent 層に混ぜない
+- 実行層を追加する場合も、Agent 層のコードには変更を加えない
+
+### 4.2 LLM の出力を確定事実として扱わない
+
+- LLM の出力は必ず Validator を通す
+- Pydantic スキーマによる構造検証を行う
+- 生の LLM 応答を実行 payload やログにそのまま流さない（要約のみ）
+
+### 4.3 実行前に計画を可視化する
+
+外部への副作用を伴う処理を追加する場合は、以下を設計原則とする。
+
+- 実行前に計画を生成し、人が確認可能な状態にする
+- dry-run（副作用なしでのプレビュー）を常に可能にする
+- 危険度の高い操作は承認なしに即実行させない
+
+### 4.4 既存機能を保護する
+
+新しい機能を追加する際、既存のエンドポイント・Agent・スキーマの動作を壊さないこと。
+回帰テストで保護されていない既存機能に手を入れる場合は、先にテストを追加する。
+
+---
+
+## 5. 技術スタック
+
+| 用途 | 技術 |
+|---|---|
+| Web フレームワーク | FastAPI |
+| バリデーション | Pydantic v2 |
+| LLM | Vertex AI / Gemini 2.0 Flash |
+| インフラ | Cloud Run |
+| テスト | pytest（LLM 呼び出しはモック） |
+| フォーマッタ | black / isort |
+| リンター | flake8 |
+| フロントエンド | LIFF（LINE Front-end Framework） |
+
+---
+
+## 6. 日本語コメント（docstring）記載ルール【必須】
+
+本リポジトリで作成・更新する **すべての Python ファイル**は、以下①〜⑤を **日本語で必ず記載**してください。
 未記載の場合、実装は **未完成扱い**です。
 
-### 4.1 ① ファイルサマリーを日本語で記載する（必須）
+### ① ファイルサマリー（必須）
 
 各 `.py` の先頭に、モジュールドックストリング（ファイルサマリー）を記載する。
+含める内容: このファイルの責務、主な入出力、重要な制約（例: 最大 Retry 回数など）
 
-含める内容：
-
-- このファイルの責務
-- 主な入出力
-- 重要な制約（例：最大Retry回数など）
-
-### 4.2 ② クラスの説明を日本語で記載する（必須）
+### ② クラスの説明（必須）
 
 クラスには必ず docstring を付ける。
+含める内容: クラスの責務、主要メソッドの役割、前提・制約
 
-含める内容：
-
-- クラスの責務
-- 主要メソッドの役割
-- 前提・制約
-
-### 4.3 ③ 関数の説明を日本語で記載する（必須）
+### ③ 関数の説明（必須）
 
 関数・メソッドには必ず docstring を付ける。
+含める内容: 何をする関数か、引数の意味（Args）、戻り値の意味（Returns）、エラー条件（Raises）
 
-含める内容：
-
-- 何をする関数か
-- 引数の意味
-- 戻り値の意味
-- エラー条件（ある場合）
-
-### 4.4 ④ 条件付き実装などのメモを Note として日本語で記載する（必須）
+### ④ 条件付き実装の Note（必須）
 
 if/else、retry、例外、環境変数分岐など **条件付きの挙動**がある場合、必ず `Note:` に条件を明記する。
 
-例：
+### ⑤ 変数の意味（必須）
 
-- 「issues が存在する場合のみ retry する」
-- 「retry は最大2回」
-- 「Generator は Validation 通過後のみ実行する」
-
-### 4.5 ⑤ 変数の意味を日本語で説明する（必須）
-
-関数内・クラス内で定義される 主要な変数 について、以下のいずれかの方法で 日本語による意味説明 を必ず記載する。
-
-対象となる変数例：
-
-- 業務上の意味を持つ変数（definition, issues, retries, agent_logs など）
-- 条件分岐や制御に影響する変数（flags, counters, status など）
-- 一時変数であっても文脈理解に重要なもの
-- 記載方法（いずれか必須）：
-- 変数定義直前のコメント
-- docstring 内の Variables: セクション
-
-未記載の場合、その実装は **レビュー未通過（未完成）扱い** とする。
+業務上の意味を持つ変数、条件分岐に影響する変数について、変数定義直前のコメントまたは docstring 内の `Variables:` セクションで日本語による意味説明を記載する。
 
 ---
 
-## 5. コーディング規約
+## 7. コーディング規約
 
 - Python は **PEP8 準拠**
 - black / isort 互換（line length = 88）
 - import の暗黙利用禁止
-- Agent の責務混在禁止（I/O層とロジック層を分離）
-- 生のLLM応答・プロンプト全文をログに出さない（要約のみ）
+- Agent の責務混在禁止（I/O 層とロジック層を分離）
+- 生の LLM 応答・プロンプト全文をログに出さない（要約のみ）
+- `Any` 型の多用禁止（やむを得ない場合はコメントを付ける）
 
 ---
 
-## 6. Git 運用（ブランチ戦略）
+## 8. テスト規約
 
-main
-├─ docs/architecture
-├─ agentic-core
-├─ backend-mvp
-├─ frontend-mvp
-└─ polish-for-submission
+### 8.1 基本原則
 
-yaml
-コードをコピーする
+- **テストファースト** — 実装の前にテストを書き、RED を確認してから実装に入ること
+- **仕様の証明** — テストは「コードが動く」ことではなく「仕様を満たしている」ことを証明するものとして書くこと
+- **独立性の確保** — 各テストは他のテストに依存せず、単独で実行可能であること
+- **スコープの厳守** — 指定された `target_files` / `target_functions` 以外のコードには原則触れないこと
+- **テストの削除・スキップによる PASS は禁止**
+
+### 8.2 テストタスクの設定項目
+
+テストコードを生成・追加するタスクでは、以下の項目を必ず明示してから作業を開始すること。
+詳細なテンプレートは `docs/test-instruction-template.md` を参照。
+
+```yaml
+target_files:        # 対象ファイルパス（最大2ファイル/タスク）
+target_functions:    # 対象クラス/関数/APIエンドポイント（最大2つ/タスク）
+test_scope:
+  include:           # 今回追加すべきテストの範囲
+  exclude:           # 今回は対象外にする観点
+source_spec:         # 仕様書ファイルパス
+ac_ids:              # 受け入れ条件 ID と内容
+coverage_threshold:  # 目標カバレッジ %
+task_constraints:
+  max_test_cases: 12
+  min_test_cases: 5
+```
+
+### 8.3 テスト観点チェックリスト
+
+**Phase 0（必須）— すべてのタスクで対応**
+
+- 正常系: 代表的な入力値での期待動作
+- 主要な異常系: 不正入力・必須欠落・例外スロー
+- 副作用: DB・外部ストアの状態が正しく変化すること
+
+**Phase 1（原則対応）**
+
+- 境界値: 最大・最小・空・null・0・false
+- エラーメッセージの内容が仕様通りであること
+- 外部 API 呼び出しの引数・回数が正しいこと（モック検証）
+
+**Phase 2（`test_scope.include` に明示された場合のみ）**
+
+- 冪等性・並行実行耐性・パフォーマンス上限
+
+### 8.4 AC ID との紐付け
+
+各テストケースには `ac_ids` から対応する ID を必ずコメントで明記すること。
+AC ID が存在しない観点のテストは追加しないこと（コメント捏造禁止）。
+
+### 8.5 モック・スタブの使用方針
+
+| 依存の種類 | 方針 |
+|---|---|
+| Vertex AI / Gemini | モック化（呼び出し引数・回数を検証） |
+| 外部 API クライアント | モック化 |
+| 時刻・乱数 | 固定値に差し替え |
+| 同一サービス内の別クラス | 原則モックしない |
+
+### 8.6 自己検証ステップ（実装後に必ず実行）
+
+```
+Step 1. テストが PASS であることを確認する
+Step 2. 実装の核となるロジックを意図的に壊し、テストが FAIL になることを確認する
+Step 3. 壊した実装を元に戻し、再度 PASS になることを確認する
+Step 4. Step 2 で FAIL にならなかったテストは検証内容を見直して修正する
+```
+
+> ⚠️ Step 2 で FAIL にならない場合、そのテストは仕様を証明していないと見なす
+
+### 8.7 エビデンス保存（タスク完了の条件）
+
+```bash
+cd backend && pytest tests/ -v > tests/evidence/test_result.txt
+```
+
+- `tests/evidence/` の `.txt` ファイルはコミット対象とする（証跡として残す）
+- タスク完了の定義は **pytest が全件 PASS** かつ **evidence ファイルが保存されている** こと
+
+---
+
+## 9. セキュリティルール
+
+### 9.1 AI・人間の双方が遵守するルール
+
+| ルール | 詳細 |
+|---|---|
+| **既存 import の盲信禁止** | 既存コードに含まれる `import` であっても、初めて別ファイルで使う際は安全性を確認する |
+| **依存パッケージの監査** | ログ・HTTP・認証・SDK ラッパー系ライブラリは実装を目視確認する |
+| **環境変数の外部送信禁止** | `os.environ` / `os.getenv` の値を外部 URL へ送信するコードを一切書かない |
+| **許可リスト外パッケージの使用禁止** | `requirements.txt` に記載のないパッケージを追加する場合は確認してから追加する |
+| **外部通信先の allowlist 管理** | 許可リストに登録されたドメインのみ通信可能。未登録先への通信実装は禁止 |
+| **生の LLM 応答をログに出さない** | 要約のみ保存する |
+| **secrets / API キーのコミット禁止** | `.env` 経由で管理し、コードに直書きしない |
+
+### 9.2 外部通信先 allowlist
+
+```
+# LLM（Vertex AI）
+*.googleapis.com
+*.google.com
+
+# パッケージ取得
+pypi.org
+files.pythonhosted.org
+```
+
+追加する場合はこのリストを更新したうえでレビューを受けること。
+
+### 9.3 セキュリティチェック手順（パッケージ追加・変更時）
+
+```bash
+pip install pip-audit
+pip-audit > tests/evidence/security_audit.txt
+```
+
+### 9.4 コードレビューチェックリスト（PR 時）
+
+- 新規 `import` 文はすべて `requirements.txt` 記載のパッケージか
+- 差分コードだけでなく、参照する既存モジュール・依存パッケージ本体を確認したか
+- 環境変数を外部へ送信していないか
+- 外部 HTTP リクエストの送信先がすべて allowlist 内のドメインか
+- `tests/evidence/` にエビデンスファイルが含まれているか
+
+---
+
+## 10. Git 運用（ブランチ戦略）
 
 | ブランチ | 役割 |
-| -------- | ------ |
-| main | 常に提出・デモ可能 |
-| docs/architecture | 設計思想・定義（コードなし） |
-| agentic-core | Agent / Orchestrator 中核 |
-| backend-mvp | FastAPI / Cloud Run |
-| frontend-mvp | デモUI |
-| polish-for-submission | README・表現調整 |
+|---|---|
+| `main` | 常にデモ可能 |
+| `docs/architecture` | 設計思想・定義（コードなし） |
+| `agentic-core` | Agent / Orchestrator 中核 |
+| `backend-mvp` | FastAPI / Cloud Run |
+| `frontend-mvp` | デモ UI |
+| `polish-for-submission` | README・表現調整 |
+
+機能拡張のブランチは `feature/{topic}` で切ること。
 
 ---
 
-## 7. 禁止事項
+## 11. 禁止事項まとめ
 
 - Agentic 構成を満たさない単発 LLM 実装
 - Validator を通さない出力
-- 日本語docstring無しの Python 実装
-- secrets / APIキーのコミット
+- 日本語 docstring 無しの Python 実装
+- secrets / API キーのコミット
 - `.venv` 等の環境依存ファイルのコミット
+- Agent 層に外部 API 呼び出しや副作用を伴う処理を混在させること
+- allowlist 未登録ドメインへの外部通信実装
+- 既存 import の無確認踏襲
+- テストの削除・スキップによる PASS
+- evidence ファイルなしのタスク完了
+- AC ID のないテストにそれらしいコメントを捏造すること
 
 ---
 
-## 8. Python 実装サンプル（本ルール準拠例）
+## 12. Done Definition
 
-以下は、本リポジトリで推奨する **docstringの書き方と実装の骨格**の例です。  
-（Google style / reST / NumPy style は自由だが、日本語で①〜⑤を満たすこと）
+タスク完了は、以下をすべて満たしたときのみ成立します。
 
-### 8.1 ファイルサマリー（①）＋条件Note（④）の例
+- 対応タスクのスコープが明確である
+- 実装がタスク指示と一致している
+- pytest が全件 PASS している
+- 自己検証ステップ（§8.6）を完了している
+- 必要なエビデンスが `tests/evidence/` に保存されている
+- 既存機能を壊していない
+- ドキュメント更新が必要なら反映されている
+- 日本語 docstring（§6 の①〜⑤）を満たしている
 
-```python
-"""
-業務文章を業務定義へ変換する Orchestrator を提供する。
+---
 
-本モジュールは Reader → Planner → Validator → Generator の順に処理を行い、
-Validator が issues を返した場合、制約付きで再試行する。
+## 13. このルールの意図（Why）
 
-Note:
-- 再試行は最大2回までとする
-- Generator は Validation 通過後のみ実行する
-- ログには要約のみを保存し、生のLLM応答やプロンプト全文は保存しない
-"""
+本プロジェクトは「AI にコードを書かせること」そのものが目的ではありません。
 
-### 8.2 クラス説明（②）の例
+- 曖昧な業務を構造化する
+- AI の思考を外に出す（可視化）
+- 人がレビュー可能な形にする
 
-python
-コードをコピーする
-class ValidatorAgent:
-    """Plannerの出力を検証するAgent。
-
-    必須項目の欠落、曖昧な条件、矛盾を検出し、issues と open_questions を返す。
-    issues が1つでもある場合、Orchestratorは失敗とみなし再試行を行う。
-
-    Note:
-        - issues が存在する場合のみ「失敗」として扱う
-    """
-
-
-### 8.3 関数説明（③）＋条件Note（④）の例
-
-python
-コードをコピーする
-def convert(self, text: str):
-    """業務文章を業務定義に変換する。
-
-    Args:
-        text: 入力となる業務文章（自然文）
-
-    Returns:
-        definition: Pydanticスキーマに準拠した業務定義
-        agent_logs: 各ステップの要約ログ（短文）
-        meta: retries回数などのメタ情報
-
-    Note:
-        - Validator が issues を返した場合のみ再試行する
-        - 再試行は最大2回まで
-    """
-
-
-### 8.4 関数説明（③）＋条件Note（④）＋変数説明（⑤）の例
-
-```python
-
-def convert(self, text: str):
-    """業務文章を業務定義に変換する。
-
-    Args:
-        text: 入力となる業務文章（自然文）
-
-    Returns:
-        definition: Pydanticスキーマに準拠した業務定義
-        agent_logs: 各ステップの要約ログ（短文）
-        meta: retries回数などのメタ情報
-
-    Variables:
-        retries:
-            Validator で失敗した場合に再試行した回数を表すカウンタ。
-            初回実行時は 0 から開始し、再試行のたびにインクリメントされる。
-
-        agent_logs:
-            Reader / Planner / Validator / Generator 各 Agent の
-            実行結果を要約したログの一覧。
-            デバッグ用途ではなく、人が処理の流れを追うための情報を保持する。
-
-        issues:
-            ValidatorAgent が検出した問題点の一覧。
-            空配列の場合のみ Validation 通過とみなされる。
-
-    Note:
-        - Validator が issues を返した場合のみ再試行する
-        - 再試行は最大2回まで
-    """
-    retries = 0  # Validator失敗時の再試行回数
-    agent_logs = []  # 各Agentの実行要約ログを格納する
-
-    reader_out = self._reader(text)
-
-    while True:
-        planner_out = self._planner(reader_out, retries=retries)
-        validator_out = self._validator(planner_out)
-
-        issues = validator_out.get("issues", [])  # 検出された問題点一覧
-
-        if not issues:
-            definition = self._generator(text, reader_out, planner_out, validator_out)
-            meta = {"retries": retries}
-            return definition, agent_logs, meta
-
-        if retries >= self.max_retries:
-            raise ValueError("再試行上限に達しました")
-
-        retries += 1
-
-
-### 8.5 最小の Agentic パイプライン骨格（参考）
-
-これは 構造の例です。実際の実装では backend/app/agent/ 配下の責務分離を維持してください。
-
-python
-コードをコピーする
-from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
-
-@dataclass
-class AgentLog:
-    """Agent実行ログ（要約）。"""
-    step: str
-    summary: str
-    issues_count: int = 0
-
-
-class Orchestrator:
-    """Agenticパイプラインを制御する。
-
-    Reader → Planner → Validator → Generator の順で実行する。
-    Validator で issues が検出された場合は、最大2回まで再試行する。
-
-    Note:
-        - 再試行は最大2回
-        - Generator は Validation 通過後のみ実行
-    """
-
-    def __init__(self, max_retries: int = 2) -> None:
-        """Orchestratorを初期化する。
-
-        Args:
-            max_retries: 再試行の最大回数
-
-        Note:
-            - max_retries は 0 以上を想定する
-        """
-        self.max_retries = max_retries
-
-    def convert(self, text: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]], Dict[str, Any]]:
-        """業務文章を業務定義（dict）へ変換する。
-
-        Args:
-            text: 入力となる業務文章
-
-        Returns:
-            (definition_dict, agent_logs, meta)
-
-        Note:
-            - issues がある場合、Planner/Generatorへの制約を増やして再試行する
-        """
-        agent_logs: List[Dict[str, Any]] = []
-        retries = 0
-
-        # ここでは例として dict を返す。実際は Pydantic モデルを返す想定。
-        reader_out = self._reader(text)
-        agent_logs.append({"step": "reader", "summary": "要素を抽出しました", "issues_count": 0})
-
-        while True:
-            planner_out = self._planner(reader_out, retries=retries)
-            agent_logs.append({"step": "planner", "summary": "タスク案を生成しました", "issues_count": 0})
-
-            validator_out = self._validator(planner_out)
-            issues = validator_out.get("issues", [])
-            agent_logs.append(
-                {"step": "validator", "summary": "検証を実施しました", "issues_count": len(issues)}
-            )
-
-            if not issues:
-                definition = self._generator(text, reader_out, planner_out, validator_out)
-                agent_logs.append({"step": "generator", "summary": "業務定義を生成しました", "issues_count": 0})
-                meta = {"retries": retries, "model": "stub"}
-                return definition, agent_logs, meta
-
-            if retries >= self.max_retries:
-                # 失敗時は要約のみ返す（詳細ログを出しすぎない）
-                raise ValueError("スキーマ必須項目の不足が解消できませんでした（再試行上限）")
-
-            retries += 1
-            agent_logs.append(
-                {"step": "orchestrator", "summary": "issues を踏まえて再試行します", "issues_count": len(issues)}
-            )
-
-    def _reader(self, text: str) -> Dict[str, Any]:
-        """Readerの仮実装。"""
-        return {"entities": [], "actions": [], "conditions": [], "exceptions": [], "assumptions": []}
-
-    def _planner(self, reader_out: Dict[str, Any], retries: int) -> Dict[str, Any]:
-        """Plannerの仮実装。
-
-        Note:
-            - retries が増えるほど、欠落項目を補う方向で出力を改善する想定
-        """
-        return {"tasks": [{"id": "task_1", "name": "仮タスク", "role": "店長", "trigger": "開店前"}], "roles": [{"name": "店長"}]}
-
-    def _validator(self, planner_out: Dict[str, Any]) -> Dict[str, Any]:
-        """Validatorの仮実装。"""
-        issues: List[str] = []
-        if not planner_out.get("tasks"):
-            issues.append("tasks が空です")
-        return {"issues": issues, "open_questions": []}
-
-    def _generator(self, text: str, reader_out: Dict[str, Any], planner_out: Dict[str, Any], validator_out: Dict[str, Any]) -> Dict[str, Any]:
-        """Generatorの仮実装（dict）。"""
-        return {"title": "仮タイトル", "overview": "仮概要", "tasks": [], "roles": [], "assumptions": [], "open_questions": []}
-
-
-## 9. このルールの意図（Why）
-
-本プロジェクトは「AIにコードを書かせること」そのものが目的ではありません。
-
-曖昧な業務を構造化する
-
-AIの思考を外に出す（可視化）
-
-人がレビュー可能な形にする
-
-そのために 日本語docstringを設計要件として強制しています。
+そのために日本語 docstring を設計要件として強制し、テストの証明力を担保し、責務分離を徹底しています。

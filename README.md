@@ -83,8 +83,50 @@ flowchart TB
 本プロジェクトは Google Cloud Japan AI Hackathon Vol.4 向けに作成しました。  
 Cloud Run と Vertex AI（Gemini）を用いて、企業業務への適用を前提に設計しています。
 
-## 10. 今後の拡張
+## 10. Phase 2.5: Workload Execution（実装済み）
 
-- 稟議・承認フローの高度化
+Phase 2.5 では、GeneratorAgent が出力する BusinessDefinition の「その先」を実装しました。
+
+### 追加アーキテクチャ
+
+```mermaid
+flowchart TB
+  BD[BusinessDefinition] --> EP[ExecutionPlanner]
+  EP --> PLAN[ExecutionPlan]
+  PLAN --> DRY[DryRun]
+  PLAN --> APPROVAL[ApprovalCheck]
+  APPROVAL -->|approved| WR[WorkloadRunner]
+  WR --> CA[Connector Adapter]
+  CA --> MC[Mock Connector]
+  WR --> ER[ExecutionResult]
+```
+
+### 追加 API エンドポイント
+
+| エンドポイント | 処理 |
+|---|---|
+| `POST /api/plan` | BusinessDefinition → ExecutionPlan |
+| `POST /api/dry-run` | 副作用なしのプレビュー |
+| `POST /api/execute` | mock connector による本実行 |
+
+### Workload Catalog（5 種類）
+
+`tag.assign` / `broadcast.schedule` / `scenario.create` / `scenario.start` / `reminder.create`
+
+### 設計の特徴
+
+- **3 層分離**: Agent 層（変更なし）→ Executor 層 → Connector 層
+- **dry-run**: 副作用なしで実行計画をプレビュー可能
+- **承認フロー**: `broadcast.schedule` は常に承認必須
+- **mock connector**: 外部 API を呼ばず、全 workload kind の疎通を検証可能
+
+詳細は `docs/phase2_5_design.md` を参照。
+
+## 11. 今後の拡張
+
+- 非同期ジョブキュー対応（Cloud Tasks / Pub/Sub）
+- 本番 LINE connector 実装
+- 承認ワークフローの永続化
+- 実行履歴の DB 保存
 - ERP / 会計システム連携
 - 社内業務自動化への展開

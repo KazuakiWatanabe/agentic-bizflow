@@ -427,6 +427,35 @@
           <pre id="logs-output">レスポンス待ち。</pre>
         </details>
       </section>
+
+      <section class="panel output-panel" id="execution-panel" style="display:none;">
+        <div class="panel-head">
+          <h2>実行計画 (Phase 2.5)</h2>
+          <p>業務定義から実行計画を生成し、dry-run・実行を行います。</p>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="btn" id="plan-btn" disabled>実行計画を生成</button>
+          <button class="btn" id="dryrun-btn" disabled>dry-run</button>
+          <button class="btn" id="execute-btn" disabled>実行（mock）</button>
+        </div>
+        <div id="approval-warning" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:12px;color:#856404;font-size:0.95em;">
+          ⚠ 承認が必要なステップがあります。「実行」を押すと承認済みとして処理されます。
+        </div>
+        <div class="output-grid">
+          <div class="output-card">
+            <h3>ExecutionPlan</h3>
+            <pre id="plan-output">未生成</pre>
+          </div>
+          <div class="output-card">
+            <h3>DryRunPreview</h3>
+            <pre id="dryrun-output">未実行</pre>
+          </div>
+          <div class="output-card">
+            <h3>ExecutionResult</h3>
+            <pre id="execute-output">未実行</pre>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer>設定は起動時に config.js へ注入されます。</footer>
@@ -759,6 +788,9 @@
           renderLlmTrace(payload.meta);
           setRequestState("成功");
           updateLiffStatus();
+          if (payload.definition) {
+            showExecutionPanel(payload.definition);
+          }
         } catch (err) {
           setError("通信に失敗しました。CORS/URL/ネットワークを確認してください。");
           setRequestState("失敗");
@@ -799,6 +831,112 @@
         await initLiff();
       };
 
+      /* --- Phase 2.5: 実行計画・dry-run・実行 --- */
+      const executionPanel = document.getElementById("execution-panel");
+      const planBtn = document.getElementById("plan-btn");
+      const dryrunBtn = document.getElementById("dryrun-btn");
+      const executeBtn = document.getElementById("execute-btn");
+      const approvalWarning = document.getElementById("approval-warning");
+      const planOutput = document.getElementById("plan-output");
+      const dryrunOutput = document.getElementById("dryrun-output");
+      const executeOutput = document.getElementById("execute-output");
+
+      let currentDefinition = null;
+      let currentPlan = null;
+
+      const showExecutionPanel = (definition) => {
+        currentDefinition = definition;
+        currentPlan = null;
+        executionPanel.style.display = "block";
+        planBtn.disabled = false;
+        dryrunBtn.disabled = true;
+        executeBtn.disabled = true;
+        approvalWarning.style.display = "none";
+        planOutput.textContent = "未生成";
+        dryrunOutput.textContent = "未実行";
+        executeOutput.textContent = "未実行";
+      };
+
+      const handlePlan = async () => {
+        if (!currentDefinition || !backendBaseUrl) return;
+        planBtn.disabled = true;
+        planOutput.textContent = "生成中...";
+        try {
+          const resp = await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/plan`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ definition: currentDefinition }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            planOutput.textContent = `エラー (${resp.status})`;
+            return;
+          }
+          currentPlan = data.plan;
+          planOutput.textContent = JSON.stringify(currentPlan, null, 2);
+          dryrunBtn.disabled = false;
+          executeBtn.disabled = false;
+          if (currentPlan.requires_approval) {
+            approvalWarning.style.display = "block";
+          }
+        } catch (err) {
+          planOutput.textContent = "通信エラー";
+        } finally {
+          planBtn.disabled = false;
+        }
+      };
+
+      const handleDryRun = async () => {
+        if (!currentPlan || !backendBaseUrl) return;
+        dryrunBtn.disabled = true;
+        dryrunOutput.textContent = "実行中...";
+        try {
+          const resp = await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/dry-run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan: currentPlan }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            dryrunOutput.textContent = `エラー (${resp.status})`;
+            return;
+          }
+          dryrunOutput.textContent = JSON.stringify(data.preview, null, 2);
+        } catch (err) {
+          dryrunOutput.textContent = "通信エラー";
+        } finally {
+          dryrunBtn.disabled = false;
+        }
+      };
+
+      const handleExecute = async () => {
+        if (!currentPlan || !backendBaseUrl) return;
+        executeBtn.disabled = true;
+        executeOutput.textContent = "実行中...";
+        try {
+          const resp = await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/execute`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plan: currentPlan, approved: true }),
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            executeOutput.textContent = `エラー (${resp.status})`;
+            return;
+          }
+          executeOutput.textContent = JSON.stringify(data.result, null, 2);
+        } catch (err) {
+          executeOutput.textContent = "通信エラー";
+        } finally {
+          executeBtn.disabled = false;
+        }
+      };
+
+      planBtn.addEventListener("click", handlePlan);
+      dryrunBtn.addEventListener("click", handleDryRun);
+      executeBtn.addEventListener("click", handleExecute);
+
+      /* --- 既存イベントリスナー --- */
       convertBtn.addEventListener("click", handleConvert);
       clearBtn.addEventListener("click", handleClear);
       if (loginBtn) {

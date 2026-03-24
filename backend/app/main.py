@@ -21,6 +21,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.convert import router as convert_router
+from app.api.routes_dry_run import router as dry_run_router
+from app.api.routes_execute import router as execute_router
+from app.api.routes_plan import router as plan_router
 
 load_dotenv()
 
@@ -81,6 +84,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(convert_router, prefix="/api")
+    app.include_router(plan_router, prefix="/api")
+    app.include_router(dry_run_router, prefix="/api")
+    app.include_router(execute_router, prefix="/api")
     app.add_api_route("/health", health, methods=["GET"])
     return app
 

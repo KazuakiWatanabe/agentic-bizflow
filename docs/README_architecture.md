@@ -183,12 +183,66 @@ agentic-bizflow/
 └─ AGENTS.md         # 最上位ルール
 ```
 
+## Phase 2.5: Workload Execution 拡張
+
+Phase 2.5 では、GeneratorAgent の出力（BusinessDefinition）を実行可能な形に変換する Executor 層を追加しました。
+
+### 追加アーキテクチャ
+
+```mermaid
+flowchart TB
+  BD[BusinessDefinition] --> EP[ExecutionPlanner]
+  EP --> PLAN[ExecutionPlan]
+
+  PLAN --> DRY[DryRun Evaluator]
+  PLAN --> APPROVAL[Approval Check]
+  APPROVAL -->|approved| WR[WorkloadRunner]
+  APPROVAL -->|blocked| BLOCK[Blocked Response]
+
+  WR --> CA[Connector Adapter]
+  CA --> MC[Mock Connector]
+  CA --> LINE[LINE Connector ※将来]
+  WR --> ER[ExecutionResult]
+  DRY --> PREVIEW[DryRun Preview]
+```
+
+### 3 層分離
+
+| 層 | 責務 |
+|---|---|
+| Agent 層（既存・変更なし） | 自然文 → BusinessDefinition |
+| Executor 層（新規） | BusinessDefinition → ExecutionPlan → ExecutionResult |
+| Connector 層（新規） | 外部システムとの接続（mock / 将来の本番実装） |
+
+### 追加 API エンドポイント
+
+```
+POST /api/plan      → ExecutionPlan（新規）
+POST /api/dry-run   → DryRunPreview（新規）
+POST /api/execute   → ExecutionResult（新規）
+```
+
+### ディレクトリ構成（追加分）
+
+```text
+backend/app/
+  schemas/          # ExecutionPlan / ExecutionResult / ConnectorCapability
+  execution/        # ExecutionPlanner / WorkloadRunner / ApprovalCheck
+  connectors/       # BaseConnector / MockLineConnector / MockInternalJobConnector
+  api/              # routes_plan / routes_dry_run / routes_execute
+```
+
+詳細設計は `docs/phase2_5_design.md` を参照。
+
 ## Limitations & Next steps（制約と今後）
 
 - 分割はルールベース。形態素解析への拡張余地あり
 - IDトークンの署名検証は未実装（デモ優先）
 - Role推定はヒューリスティック。業務別ルール拡張が必要
 - エンティティ抽出（org/date/amount）を今後拡張可能
+- 本番 LINE connector の実装（Phase 3）
+- 承認ワークフローの永続化（Phase 3）
+- 非同期ジョブキュー対応（Phase 3）
 
 ## License
 
