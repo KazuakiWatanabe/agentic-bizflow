@@ -24,7 +24,7 @@ test_scope:
   exclude: "{今回は対象外にする観点（例: パフォーマンス、並行性）}"
 
 # --- 仕様との紐付け ---
-source_spec: "{仕様書ファイルパス}"  # 例: docs/phase2_5_design.md#task-4
+source_spec: "{仕様書ファイルパス}"  # 例: docs/phase2.5/phase2_5_design.md#task-4
 ac_ids:
   - "{AC-01: 受け入れ条件の内容を一行で記述}"
   - "{AC-02: 受け入れ条件の内容を一行で記述}"

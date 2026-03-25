@@ -1,6 +1,6 @@
 # Phase 2.5: Workload Execution — 設計書
 
-> **参照元:** `docs/phase2_5_roadmap.md`
+> **参照元:** [`docs/phase2.5/phase2_5_roadmap.md`](phase2_5_roadmap.md)
 > **最上位ルール:** `AGENTS.md`
 
 ---

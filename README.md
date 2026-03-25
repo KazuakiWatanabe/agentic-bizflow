@@ -120,7 +120,7 @@ flowchart TB
 - **承認フロー**: `broadcast.schedule` は常に承認必須
 - **mock connector**: 外部 API を呼ばず、全 workload kind の疎通を検証可能
 
-詳細は `docs/phase2_5_design.md` を参照。
+詳細は [`docs/phase2.5/phase2_5_design.md`](docs/phase2.5/phase2_5_design.md) を参照。
 
 ## 11. 今後の拡張
 
