@@ -1,6 +1,6 @@
 # Phase 2.5: Workload Execution — 実装タスク
 
-> **設計の参照先:** `docs/phase2_5_roadmap.md`
+> **設計の参照先:** [`docs/phase2.5/phase2_5_roadmap.md`](../docs/phase2.5/phase2_5_roadmap.md)
 > **最上位ルール:** `AGENTS.md`
 > **実務ガイド:** `CLAUDE.md`
 
@@ -17,7 +17,7 @@
 
 ## Task 1: 設計ドキュメントの作成
 
-**作業:** `docs/phase2_5_design.md` を作成する。
+**作業:** `docs/phase2.5/phase2_5_design.md` を作成する。
 
 **内容:**
 - Phase 2.5 の目的と範囲
@@ -26,10 +26,10 @@
 - approval / dry-run / connector adapter の責務定義
 - アーキテクチャの Mermaid 図
 
-> 設計の元ネタは `docs/phase2_5_roadmap.md` §2〜§5 を参照。
+> 設計の元ネタは [`docs/phase2.5/phase2_5_roadmap.md`](../docs/phase2.5/phase2_5_roadmap.md) §2〜§5 を参照。
 
 **完了条件:**
-- `docs/phase2_5_design.md` が存在する
+- `docs/phase2.5/phase2_5_design.md` が存在する
 - 責務境界と Workload Catalog が明記されている
 - Mermaid 図が含まれている
 
@@ -43,7 +43,7 @@
 - `execution_result.py` — ExecutionResult, StepResult, DryRunPreview
 - `connector_capability.py` — ConnectorCapability
 
-> フィールド定義は `docs/phase2_5_roadmap.md` §5 を参照。
+> フィールド定義は [`docs/phase2.5/phase2_5_roadmap.md`](../docs/phase2.5/phase2_5_roadmap.md) §5 を参照。
 
 **完了条件:**
 - 各モデルに日本語 docstring がある
@@ -76,7 +76,7 @@
 
 **判定ロジック:**
 
-> 変換ルール・承認判定・risk_level 判定は `docs/phase2_5_roadmap.md` §3 を参照。
+> 変換ルール・承認判定・risk_level 判定は [`docs/phase2.5/phase2_5_roadmap.md`](../docs/phase2.5/phase2_5_roadmap.md) §3 を参照。
 
 - BusinessDefinition の内容から workload kind を判定する
 - 承認要否を step ごとに判定する
@@ -148,7 +148,7 @@
 | `POST /api/dry-run` | `{ plan_id }` or `{ plan }` | DryRunPreview | WorkloadRunner.run(dry_run=True) |
 | `POST /api/execute` | `{ plan_id, approved }` | ExecutionResult | WorkloadRunner.run(dry_run=False) |
 
-> レスポンス例は `docs/phase2_5_roadmap.md` §6 を参照。
+> レスポンス例は [`docs/phase2.5/phase2_5_roadmap.md`](../docs/phase2.5/phase2_5_roadmap.md) §6 を参照。
 
 **完了条件:**
 - OpenAPI ドキュメントに反映される

@@ -232,7 +232,7 @@ backend/app/
   api/              # routes_plan / routes_dry_run / routes_execute
 ```
 
-詳細設計は `docs/phase2_5_design.md` を参照。
+詳細設計は [`docs/phase2.5/phase2_5_design.md`](phase2.5/phase2_5_design.md) を参照。
 
 ## Limitations & Next steps（制約と今後）
 
