@@ -99,9 +99,10 @@ Phase 2.5 では、GeneratorAgent が出力する BusinessDefinition の「そ�
 
 詳細は [`docs/phase2.5/phase2_5_design.md`](docs/phase2.5/phase2_5_design.md) を参照。
 
-## 11. Phase 3: Stateful Execution Platform（実装済み）
+## 11. Phase 3: Stateful Execution Platform（バックエンド実装済み / フロントエンド未対応）
 
 Phase 3 では、メモリ上の一時オブジェクトだった実行計画・実行結果を DB に永続化し、「状態を持つ実行基盤」に拡張しました。
+フロントエンド（実行履歴画面の追加）は未対応です。
 
 ### 追加アーキテクチャ
 
