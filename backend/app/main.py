@@ -29,6 +29,8 @@ from app.api.routes_dry_run import router as dry_run_router
 from app.api.routes_execute import router as execute_router
 from app.api.routes_history import router as history_router
 from app.api.routes_plan import router as plan_router
+from app.api.routes_worker_status import router as worker_status_router
+from app.api.routes_workload_status import router as workload_status_router
 
 load_dotenv()
 
@@ -111,6 +113,8 @@ def create_app() -> FastAPI:
     app.include_router(history_router, prefix="/api")
     app.include_router(approval_router, prefix="/api")
     app.include_router(domains_router, prefix="/api")
+    app.include_router(workload_status_router, prefix="/api")
+    app.include_router(worker_status_router, prefix="/api")
     app.add_api_route("/health", health, methods=["GET"])
     return app
 

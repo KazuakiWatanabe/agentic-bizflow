@@ -213,7 +213,45 @@ conn.close()
 
 ---
 
-## 7. DB のリセット
+## 7. 管理 UI（Streamlit）
+
+バックエンド起動中に別ターミナルで:
+
+```bash
+pip install streamlit requests
+streamlit run admin/app.py
+```
+
+ブラウザで http://localhost:8501 が開きます。
+
+### 画面一覧
+
+| 画面 | 内容 |
+|---|---|
+| Workload サマリー | シナリオ・配信・リマインダー・タグの統合カウント |
+| 実行履歴 | 実行結果の一覧・詳細展開 |
+| 承認管理 | 承認待ち一覧と承認/却下ボタン |
+| Worker 状態 | Scheduler の実行ログ |
+| ドメイン管理 | Workload Kind 一覧 / Domain 設定 |
+| 業務文章変換 | テキスト入力 → 変換 → 計画 → dry-run → 実行の全フロー |
+
+---
+
+## 8. Workload 状態 API
+
+実行後の workload の状態を確認する API:
+
+```bash
+# 統合サマリー
+curl -s http://localhost:8080/api/workloads/summary | python -m json.tool
+
+# Worker 実行状態
+curl -s http://localhost:8080/api/workers/status | python -m json.tool
+```
+
+---
+
+## 9. DB のリセット
 
 データを全て削除して最初からやり直す場合:
 

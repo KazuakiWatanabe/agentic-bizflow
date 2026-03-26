@@ -240,7 +240,37 @@ Phase 5 では、LINE 以外の業務ドメインにも同じオーケストレ�
 
 詳細は [`docs/phase5/phase5_design.md`](docs/phase5/phase5_design.md) を参照。
 
-## 14. 今後の拡張
+## 14. Phase 6: Demo-Ready Integration（実装済み）
+
+Phase 6 では、これまでの全機能を横断的に可視化するデモ基盤を構築しました。
+
+### 追加機能
+
+- **Workload 状態 API**: シナリオ・配信・リマインダー・タグの統合サマリー
+- **Worker 状態 API**: Scheduler 各 Worker の最終実行状態
+- **管理 UI（Streamlit）**: Workload サマリー / 実行履歴 / 承認管理 / Worker 状態 / ドメイン管理 / 業務文章変換
+- **LINE live connector 拡張**: tag.assign の LINE API 呼び出し枠組み
+
+### 追加 API エンドポイント
+
+| エンドポイント | 処理 |
+|---|---|
+| `GET /api/workloads/summary` | Workload 統合サマリー |
+| `GET /api/workloads/scenarios` | シナリオ + enrollment 状態 |
+| `GET /api/workloads/broadcasts` | 配信ステータス別カウント |
+| `GET /api/workloads/reminders` | リマインダー + enrollment 状態 |
+| `GET /api/workers/status` | Worker 最終実行状態 |
+
+### 管理 UI の起動
+
+```bash
+pip install streamlit requests
+streamlit run admin/app.py
+```
+
+詳細は [`docs/phase6/phase6_design.md`](docs/phase6/phase6_design.md) を参照。
+
+## 15. 今後の拡張
 
 - Cloud Scheduler + Cloud Run Jobs への移行
 - POS / CRM / ERP ドメインの connector 追加（`domains/_template/` からコピー）
