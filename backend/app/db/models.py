@@ -80,13 +80,9 @@ class ExecutionPlanModel(Base):
     requires_approval: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
-    risk_level: Mapped[str] = mapped_column(
-        String, nullable=False, default="low"
-    )
+    risk_level: Mapped[str] = mapped_column(String, nullable=False, default="low")
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(
-        String, nullable=False, default="created"
-    )
+    status: Mapped[str] = mapped_column(String, nullable=False, default="created")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
     )
@@ -126,15 +122,9 @@ class ExecutionResultModel(Base):
     )
     status: Mapped[str] = mapped_column(String, nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
-    )
-    errors_json: Mapped[str] = mapped_column(
-        Text, nullable=False, default="[]"
-    )
-    warnings_json: Mapped[str] = mapped_column(
-        Text, nullable=False, default="[]"
-    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    errors_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    warnings_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
 
     # リレーション
     plan: Mapped["ExecutionPlanModel"] = relationship(
@@ -217,9 +207,7 @@ class TagModel(Base):
     )
 
     # リレーション
-    assignments: Mapped[list["TagAssignmentModel"]] = relationship(
-        back_populates="tag"
-    )
+    assignments: Mapped[list["TagAssignmentModel"]] = relationship(back_populates="tag")
 
 
 class TagAssignmentModel(Base):
@@ -240,9 +228,7 @@ class TagAssignmentModel(Base):
     __tablename__ = "tag_assignments"
 
     target_id: Mapped[str] = mapped_column(String, primary_key=True)
-    tag_id: Mapped[str] = mapped_column(
-        String, ForeignKey("tags.id"), primary_key=True
-    )
+    tag_id: Mapped[str] = mapped_column(String, ForeignKey("tags.id"), primary_key=True)
     assigned_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
     )
@@ -276,15 +262,11 @@ class ScenarioModel(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    trigger_type: Mapped[str] = mapped_column(
-        String, nullable=False, default="manual"
-    )
+    trigger_type: Mapped[str] = mapped_column(String, nullable=False, default="manual")
     trigger_tag_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("tags.id"), nullable=True
     )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     execution_plan_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("execution_plans.id"), nullable=True
     )
@@ -296,9 +278,7 @@ class ScenarioModel(Base):
     )
 
     # リレーション
-    steps: Mapped[list["ScenarioStepModel"]] = relationship(
-        back_populates="scenario"
-    )
+    steps: Mapped[list["ScenarioStepModel"]] = relationship(back_populates="scenario")
     enrollments: Mapped[list["ScenarioEnrollmentModel"]] = relationship(
         back_populates="scenario"
     )
@@ -332,12 +312,8 @@ class ScenarioStepModel(Base):
         String, ForeignKey("scenarios.id"), nullable=False
     )
     step_order: Mapped[int] = mapped_column(Integer, nullable=False)
-    delay_minutes: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    message_type: Mapped[str] = mapped_column(
-        String, nullable=False, default="text"
-    )
+    delay_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    message_type: Mapped[str] = mapped_column(String, nullable=False, default="text")
     message_content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
@@ -378,15 +354,9 @@ class ScenarioEnrollmentModel(Base):
         String, ForeignKey("scenarios.id"), nullable=False
     )
     target_id: Mapped[str] = mapped_column(String, nullable=False)
-    current_step_order: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    status: Mapped[str] = mapped_column(
-        String, nullable=False, default="active"
-    )
-    next_delivery_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
-    )
+    current_step_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
+    next_delivery_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
     )
@@ -395,9 +365,7 @@ class ScenarioEnrollmentModel(Base):
     )
 
     # リレーション
-    scenario: Mapped["ScenarioModel"] = relationship(
-        back_populates="enrollments"
-    )
+    scenario: Mapped["ScenarioModel"] = relationship(back_populates="enrollments")
 
 
 class BroadcastModel(Base):
@@ -433,31 +401,17 @@ class BroadcastModel(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
-    message_type: Mapped[str] = mapped_column(
-        String, nullable=False, default="text"
-    )
+    message_type: Mapped[str] = mapped_column(String, nullable=False, default="text")
     message_content: Mapped[str] = mapped_column(Text, nullable=False)
-    target_type: Mapped[str] = mapped_column(
-        String, nullable=False, default="all"
-    )
+    target_type: Mapped[str] = mapped_column(String, nullable=False, default="all")
     target_tag_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("tags.id"), nullable=True
     )
-    status: Mapped[str] = mapped_column(
-        String, nullable=False, default="draft"
-    )
-    scheduled_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
-    )
-    sent_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
-    )
-    total_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    success_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
+    status: Mapped[str] = mapped_column(String, nullable=False, default="draft")
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    total_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    success_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     execution_plan_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("execution_plans.id"), nullable=True
     )
@@ -486,9 +440,7 @@ class ReminderModel(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     execution_plan_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("execution_plans.id"), nullable=True
     )
@@ -500,9 +452,7 @@ class ReminderModel(Base):
     )
 
     # リレーション
-    steps: Mapped[list["ReminderStepModel"]] = relationship(
-        back_populates="reminder"
-    )
+    steps: Mapped[list["ReminderStepModel"]] = relationship(back_populates="reminder")
     enrollments: Mapped[list["ReminderEnrollmentModel"]] = relationship(
         back_populates="reminder"
     )
@@ -526,18 +476,14 @@ class ReminderStepModel(Base):
     """
 
     __tablename__ = "reminder_steps"
-    __table_args__ = (
-        Index("ix_reminder_steps_reminder_id", "reminder_id"),
-    )
+    __table_args__ = (Index("ix_reminder_steps_reminder_id", "reminder_id"),)
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     reminder_id: Mapped[str] = mapped_column(
         String, ForeignKey("reminders.id"), nullable=False
     )
     offset_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
-    message_type: Mapped[str] = mapped_column(
-        String, nullable=False, default="text"
-    )
+    message_type: Mapped[str] = mapped_column(String, nullable=False, default="text")
     message_content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
@@ -574,9 +520,7 @@ class ReminderEnrollmentModel(Base):
     )
     target_id: Mapped[str] = mapped_column(String, nullable=False)
     target_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String, nullable=False, default="active"
-    )
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
     )
@@ -585,9 +529,7 @@ class ReminderEnrollmentModel(Base):
     )
 
     # リレーション
-    reminder: Mapped["ReminderModel"] = relationship(
-        back_populates="enrollments"
-    )
+    reminder: Mapped["ReminderModel"] = relationship(back_populates="enrollments")
     deliveries: Mapped[list["ReminderDeliveryModel"]] = relationship(
         back_populates="enrollment"
     )

@@ -25,10 +25,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 load_dotenv()
 
-from app.db.base import Base  # noqa: E402
-
 # models.py を import して全 ORM モデルを Base.metadata に登録する
 import app.db.models  # noqa: E402, F401
+from app.db.base import Base  # noqa: E402
 
 # Alembic の設定オブジェクト
 config = context.config

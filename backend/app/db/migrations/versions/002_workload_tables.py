@@ -102,9 +102,7 @@ def upgrade() -> None:
         ),
         sa.Column("message_content", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.UniqueConstraint(
-            "scenario_id", "step_order", name="uq_scenario_step_order"
-        ),
+        sa.UniqueConstraint("scenario_id", "step_order", name="uq_scenario_step_order"),
     )
 
     # scenario_enrollments
@@ -198,9 +196,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False),
     )
     op.create_index("ix_broadcasts_status", "broadcasts", ["status"])
-    op.create_index(
-        "ix_broadcasts_scheduled_at", "broadcasts", ["scheduled_at"]
-    )
+    op.create_index("ix_broadcasts_scheduled_at", "broadcasts", ["scheduled_at"])
 
     # reminders
     op.create_table(
@@ -244,9 +240,7 @@ def upgrade() -> None:
         sa.Column("message_content", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
     )
-    op.create_index(
-        "ix_reminder_steps_reminder_id", "reminder_steps", ["reminder_id"]
-    )
+    op.create_index("ix_reminder_steps_reminder_id", "reminder_steps", ["reminder_id"])
 
     # reminder_enrollments
     op.create_table(

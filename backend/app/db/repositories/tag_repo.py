@@ -57,9 +57,7 @@ class TagRepository:
         return tag
 
     @staticmethod
-    def assign_tag(
-        db: Session, tag_id: str, target_id: str
-    ) -> TagAssignmentModel:
+    def assign_tag(db: Session, tag_id: str, target_id: str) -> TagAssignmentModel:
         """対象者にタグを付与する。
 
         Args:

@@ -138,9 +138,7 @@ class DBLineConnector(BaseConnector):
             supports_schedule=True,
         )
 
-    def _execute_tag_assign(
-        self, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _execute_tag_assign(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """tag.assign を実行し、tags + tag_assignments に書き込む。
 
         Args:
@@ -169,9 +167,7 @@ class DBLineConnector(BaseConnector):
             "created_records": {"tags": 1, "tag_assignments": 1},
         }
 
-    def _execute_broadcast_schedule(
-        self, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _execute_broadcast_schedule(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """broadcast.schedule を実行し、broadcasts に書き込む。
 
         Args:
@@ -198,9 +194,7 @@ class DBLineConnector(BaseConnector):
             "created_records": {"broadcasts": 1},
         }
 
-    def _execute_scenario_create(
-        self, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _execute_scenario_create(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """scenario.create を実行し、scenarios + scenario_steps に書き込む。
 
         Args:
@@ -236,9 +230,7 @@ class DBLineConnector(BaseConnector):
             },
         }
 
-    def _execute_scenario_start(
-        self, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _execute_scenario_start(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """scenario.start を実行し、scenario_enrollments に書き込む。
 
         Args:
@@ -256,9 +248,7 @@ class DBLineConnector(BaseConnector):
 
         from app.db.models import ScenarioModel
 
-        scenario = (
-            self._db.query(ScenarioModel).filter_by(name=name).first()
-        )
+        scenario = self._db.query(ScenarioModel).filter_by(name=name).first()
         if scenario is None:
             return {
                 "status": "failed",
@@ -283,9 +273,7 @@ class DBLineConnector(BaseConnector):
             "created_records": {"scenario_enrollments": 1},
         }
 
-    def _execute_reminder_create(
-        self, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _execute_reminder_create(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """reminder.create を実行し、reminders + reminder_steps に書き込む。
 
         Args:

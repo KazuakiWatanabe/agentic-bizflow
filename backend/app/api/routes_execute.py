@@ -147,9 +147,7 @@ def execute(
     except Exception as exc:
         # 失敗時も plan status を更新
         if plan_record:
-            ExecutionRepository.update_plan_status(
-                db, plan.plan_id, "failed"
-            )
+            ExecutionRepository.update_plan_status(db, plan.plan_id, "failed")
             db.commit()
         raise HTTPException(
             status_code=500,
@@ -171,12 +169,8 @@ def execute(
 
         # execution_plans.status を最終状態に更新
         if plan_record:
-            final_status = (
-                "completed" if result.status == "success" else "failed"
-            )
-            ExecutionRepository.update_plan_status(
-                db, plan.plan_id, final_status
-            )
+            final_status = "completed" if result.status == "success" else "failed"
+            ExecutionRepository.update_plan_status(db, plan.plan_id, final_status)
 
         db.commit()
     except Exception as exc:

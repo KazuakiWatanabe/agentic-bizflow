@@ -248,9 +248,7 @@ class ExecutionRepository:
         return records
 
     @staticmethod
-    def get_result(
-        db: Session, execution_id: str
-    ) -> Optional[ExecutionResultModel]:
+    def get_result(db: Session, execution_id: str) -> Optional[ExecutionResultModel]:
         """execution_id で ExecutionResult を取得する。
 
         Args:
@@ -260,9 +258,7 @@ class ExecutionRepository:
         Returns:
             ExecutionResultModel または None
         """
-        return (
-            db.query(ExecutionResultModel).filter_by(id=execution_id).first()
-        )
+        return db.query(ExecutionResultModel).filter_by(id=execution_id).first()
 
     @staticmethod
     def list_results(

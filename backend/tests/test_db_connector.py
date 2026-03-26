@@ -47,9 +47,7 @@ class TestDBLineConnectorExecute:
         assert result["status"] == "success"
         assert db_session.query(TagModel).filter_by(name="VIP").first() is not None
         assert (
-            db_session.query(TagAssignmentModel)
-            .filter_by(target_id="user_001")
-            .first()
+            db_session.query(TagAssignmentModel).filter_by(target_id="user_001").first()
             is not None
         )
 
@@ -74,9 +72,7 @@ class TestDBLineConnectorExecute:
         assert broadcast is not None
         assert broadcast.status == "scheduled"
 
-    def test_scenario_createでscenarios_と_stepsが作成される(
-        self, db_session
-    ) -> None:
+    def test_scenario_createでscenarios_と_stepsが作成される(self, db_session) -> None:
         """scenario.create で scenarios + scenario_steps が作成される。
 
         Variables:
@@ -94,9 +90,7 @@ class TestDBLineConnectorExecute:
         assert db_session.query(ScenarioModel).first() is not None
         assert db_session.query(ScenarioStepModel).count() == 2
 
-    def test_scenario_startでenrollmentsがactiveで作成される(
-        self, db_session
-    ) -> None:
+    def test_scenario_startでenrollmentsがactiveで作成される(self, db_session) -> None:
         """scenario.start で scenario_enrollments が active で作成される。
 
         Variables:
@@ -122,9 +116,7 @@ class TestDBLineConnectorExecute:
         assert enrollment is not None
         assert enrollment.status == "active"
 
-    def test_reminder_createでreminders_と_stepsが作成される(
-        self, db_session
-    ) -> None:
+    def test_reminder_createでreminders_と_stepsが作成される(self, db_session) -> None:
         """reminder.create で reminders + reminder_steps が作成される。
 
         Variables:
@@ -142,9 +134,7 @@ class TestDBLineConnectorExecute:
         assert db_session.query(ReminderModel).first() is not None
         assert db_session.query(ReminderStepModel).count() == 2
 
-    def test_scenario_start_存在しないシナリオでfailed(
-        self, db_session
-    ) -> None:
+    def test_scenario_start_存在しないシナリオでfailed(self, db_session) -> None:
         """存在しないシナリオで scenario.start が failed を返すことを確認する。"""
         connector = DBLineConnector(db=db_session)
         result = connector.execute(
