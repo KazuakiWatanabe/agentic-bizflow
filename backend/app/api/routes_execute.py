@@ -22,8 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from app.connectors.db_line_connector import DBLineConnector
-from app.connectors.mock_internal_job_connector import MockInternalJobConnector
+from app.connectors.registry import build_connector_registry
 from app.db.repositories.execution_repo import ExecutionRepository
 from app.db.session import get_db
 from app.execution.approval import check_approval
@@ -36,7 +35,7 @@ router = APIRouter()
 
 
 def _build_runner(db: Session) -> WorkloadRunner:
-    """DB 対応の connector registry を持つ WorkloadRunner を生成する。
+    """connector registry を持つ WorkloadRunner を生成する。
 
     Args:
         db: SQLAlchemy セッション
@@ -45,12 +44,9 @@ def _build_runner(db: Session) -> WorkloadRunner:
         WorkloadRunner インスタンス
 
     Note:
-        - line connector は DBLineConnector を使用する
+        - LINE_CONNECTOR_MODE 環境変数で connector を切替可能
     """
-    registry = {
-        "line": DBLineConnector(db=db),
-        "internal_job": MockInternalJobConnector(),
-    }
+    registry = build_connector_registry(db)
     return WorkloadRunner(registry=registry)
 
 

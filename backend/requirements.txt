@@ -1,6 +1,8 @@
 alembic
+apscheduler>=3.10
 fastapi
 google-genai
+httpx
 pydantic>=2
 python-dotenv
 sqlalchemy>=2.0

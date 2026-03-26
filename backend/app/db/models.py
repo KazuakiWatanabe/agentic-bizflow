@@ -357,6 +357,8 @@ class ScenarioEnrollmentModel(Base):
     current_step_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String, nullable=False, default="active")
     next_delivery_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_retries: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     started_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
     )
@@ -575,3 +577,131 @@ class ReminderDeliveryModel(Base):
     enrollment: Mapped["ReminderEnrollmentModel"] = relationship(
         back_populates="deliveries"
     )
+
+
+# ============================================================
+# Phase 4 テーブル
+# ============================================================
+
+
+class ApprovalRequestModel(Base):
+    """承認リクエストの永続化モデル。
+
+    ExecutionPlan の承認状態を DB に保存する。
+    Phase 2.5 の「API パラメータ approved=true」を DB 永続化方式に拡張する。
+
+    Variables:
+        id: UUID 文字列
+        plan_id: 対象 plan の ID（FK → execution_plans, UNIQUE）
+        status: pending / approved / rejected
+        requested_at: リクエスト日時
+        decided_at: 承認/却下日時
+        decided_by: 承認者（将来の認証統合用）
+        reason: 承認/却下理由
+
+    Note:
+        - plan_id は UNIQUE（1 plan に 1 承認リクエスト）
+        - pending → approved または pending → rejected に遷移する
+    """
+
+    __tablename__ = "approval_requests"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    plan_id: Mapped[str] = mapped_column(
+        String, ForeignKey("execution_plans.id"), unique=True, nullable=False
+    )
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ProcessedIdempotencyKeyModel(Base):
+    """冪等性管理の永続化モデル。
+
+    処理済みの idempotency_key を記録し、二重実行を防止する。
+
+    Variables:
+        idempotency_key: ExecutionStep の idempotency_key（PK）
+        step_id: ステップ ID
+        plan_id: plan ID
+        processed_at: 処理日時
+
+    Note:
+        - WorkloadRunner が step 実行前にチェックし、存在すればスキップする
+    """
+
+    __tablename__ = "processed_idempotency_keys"
+
+    idempotency_key: Mapped[str] = mapped_column(String, primary_key=True)
+    step_id: Mapped[str] = mapped_column(String, nullable=False)
+    plan_id: Mapped[str] = mapped_column(String, nullable=False)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+
+
+class ExecutionAuditLogModel(Base):
+    """監査ログの永続化モデル。
+
+    全操作の証跡を記録する。
+
+    Variables:
+        id: UUID 文字列
+        execution_id: 関連する execution（nullable）
+        plan_id: 関連する plan（nullable）
+        action: 操作種別
+        detail_json: 操作の詳細（JSON 文字列）
+        created_at: 記録日時
+
+    Note:
+        - detail_json に生の LLM 応答は含めない（要約のみ）
+    """
+
+    __tablename__ = "execution_audit_logs"
+    __table_args__ = (
+        Index("ix_audit_logs_execution_id", "execution_id"),
+        Index("ix_audit_logs_plan_id", "plan_id"),
+        Index("ix_audit_logs_action", "action"),
+        Index("ix_audit_logs_created_at", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    execution_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    plan_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    detail_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+
+
+class WorkerTaskLogModel(Base):
+    """定期処理ログの永続化モデル。
+
+    Scheduler の各実行サイクルを記録する。
+
+    Variables:
+        id: UUID 文字列
+        task_name: 処理名
+        started_at: 開始日時
+        finished_at: 終了日時
+        processed_count: 処理件数
+        error_count: エラー件数
+        status: running / completed / failed
+    """
+
+    __tablename__ = "worker_task_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    task_name: Mapped[str] = mapped_column(String, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    processed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="running")

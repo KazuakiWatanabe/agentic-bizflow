@@ -22,6 +22,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from app.db.repositories.approval_repo import ApprovalRepository
+from app.db.repositories.audit_repo import AuditRepository
 from app.db.repositories.execution_repo import ExecutionRepository
 from app.db.session import get_db
 from app.execution.execution_planner import ExecutionPlanner
@@ -172,6 +174,22 @@ def create_plan(
             definition=request.definition,
             definition_id=request.definition_id,
         )
+
+        # 承認が必要な場合は approval_requests を作成
+        if plan.requires_approval:
+            ApprovalRepository.create(db, plan_id=plan.plan_id)
+
+        # 監査ログ
+        AuditRepository.log(
+            db,
+            action="plan_created",
+            plan_id=plan.plan_id,
+            detail={
+                "summary": plan.summary,
+                "requires_approval": plan.requires_approval,
+            },
+        )
+
         db.commit()
     except Exception as exc:
         db.rollback()
