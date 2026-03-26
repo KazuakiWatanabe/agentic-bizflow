@@ -705,3 +705,124 @@ class WorkerTaskLogModel(Base):
     processed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String, nullable=False, default="running")
+
+
+# ============================================================
+# Phase 5 テーブル
+# ============================================================
+
+
+class DomainConfigModel(Base):
+    """ドメイン設定の永続化モデル。
+
+    各ドメイン（line, email 等）の有効/無効状態と設定 JSON を管理する。
+
+    Variables:
+        id: UUID 文字列
+        domain: ドメイン識別子（UNIQUE）
+        display_name: 管理画面での表示名
+        is_enabled: ドメイン有効/無効
+        config_json: ドメイン固有設定の JSON 文字列
+        created_at: 作成日時
+        updated_at: 更新日時
+
+    Note:
+        - domain は UNIQUE 制約を持つ（1 ドメインにつき 1 レコード）
+        - config_json のデフォルトは '{}'（空 JSON オブジェクト）
+        - is_enabled のデフォルトは False
+    """
+
+    __tablename__ = "domain_configs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    domain: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String, nullable=False)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    config_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow, onupdate=_utcnow
+    )
+
+
+class EmailBroadcastModel(Base):
+    """メール一斉配信の永続化モデル。
+
+    メール一斉配信の予約・実行状態を管理する。
+
+    Variables:
+        id: UUID 文字列
+        subject: メール件名
+        body_html: HTML 本文
+        body_text: テキスト本文（任意）
+        from_address: 送信元メールアドレス
+        target_type: 配信対象種別（all / segment）
+        status: draft / scheduled / sending / sent / failed
+        scheduled_at: 配信予約日時
+        sent_at: 送信完了日時
+        total_count: 配信対象者数
+        success_count: 送信成功数
+        execution_plan_id: 生成元の plan ID（FK → execution_plans）
+        created_at: 作成日時
+
+    Note:
+        - status のデフォルトは 'draft'
+        - target_type のデフォルトは 'all'
+        - status, scheduled_at にインデックスを作成する
+    """
+
+    __tablename__ = "email_broadcasts"
+    __table_args__ = (
+        Index("ix_email_broadcasts_status", "status"),
+        Index("ix_email_broadcasts_scheduled_at", "scheduled_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    subject: Mapped[str] = mapped_column(String, nullable=False)
+    body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    body_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    from_address: Mapped[str] = mapped_column(String, nullable=False)
+    target_type: Mapped[str] = mapped_column(String, nullable=False, default="all")
+    status: Mapped[str] = mapped_column(String, nullable=False, default="draft")
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    total_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    success_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    execution_plan_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("execution_plans.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+
+
+class EmailTemplateModel(Base):
+    """メールテンプレートの永続化モデル。
+
+    再利用可能なメールテンプレートを管理する。
+
+    Variables:
+        id: UUID 文字列
+        name: テンプレート名
+        subject: メール件名
+        body_html: HTML 本文
+        body_text: テキスト本文（任意）
+        created_at: 作成日時
+        updated_at: 更新日時
+    """
+
+    __tablename__ = "email_templates"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    subject: Mapped[str] = mapped_column(String, nullable=False)
+    body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    body_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow, onupdate=_utcnow
+    )

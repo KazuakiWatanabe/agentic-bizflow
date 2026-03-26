@@ -18,13 +18,9 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 # --- workload kind の定義 ---
-WorkloadKind = Literal[
-    "tag.assign",
-    "broadcast.schedule",
-    "scenario.create",
-    "scenario.start",
-    "reminder.create",
-]
+# Phase 5: Literal から str に変更。Registry で動的に検証する。
+# 後方互換のためエイリアスで旧形式（tag.assign 等）も受け付ける。
+WorkloadKind = str
 
 # --- step の実行状態 ---
 StepStatus = Literal[

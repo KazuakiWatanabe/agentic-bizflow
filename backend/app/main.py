@@ -24,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.convert import router as convert_router
 from app.api.routes_approval import router as approval_router
+from app.api.routes_domains import router as domains_router
 from app.api.routes_dry_run import router as dry_run_router
 from app.api.routes_execute import router as execute_router
 from app.api.routes_history import router as history_router
@@ -109,6 +110,7 @@ def create_app() -> FastAPI:
     app.include_router(execute_router, prefix="/api")
     app.include_router(history_router, prefix="/api")
     app.include_router(approval_router, prefix="/api")
+    app.include_router(domains_router, prefix="/api")
     app.add_api_route("/health", health, methods=["GET"])
     return app
 
