@@ -436,7 +436,7 @@
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
           <button class="btn" id="plan-btn" disabled>実行計画を生成</button>
           <button class="btn" id="dryrun-btn" disabled>dry-run</button>
-          <button class="btn" id="execute-btn" disabled>実行（mock）</button>
+          <button class="btn" id="execute-btn" disabled>実行</button>
         </div>
         <div id="approval-warning" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:12px;color:#856404;font-size:0.95em;">
           ⚠ 承認が必要なステップがあります。「実行」を押すと承認済みとして処理されます。
@@ -453,6 +453,28 @@
           <div class="output-card">
             <h3>ExecutionResult</h3>
             <pre id="execute-output">未実行</pre>
+          </div>
+        </div>
+        <div id="history-link" style="display:none;margin-top:12px;">
+          <button class="ghost" id="show-history-btn" type="button">実行履歴を見る</button>
+        </div>
+      </section>
+
+      <section class="panel output-panel" id="history-panel" style="display:none;">
+        <div class="panel-head">
+          <h2>実行履歴 (Phase 3)</h2>
+          <p>DB に保存された実行履歴を表示します。</p>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="ghost" id="refresh-history-btn" type="button">更新</button>
+        </div>
+        <div id="history-list">
+          <p style="color:var(--muted);font-size:14px;">読み込み中...</p>
+        </div>
+        <div id="history-detail" style="display:none;margin-top:16px;">
+          <div class="output-card">
+            <h3>実行詳細</h3>
+            <pre id="history-detail-output"></pre>
           </div>
         </div>
       </section>
@@ -840,6 +862,15 @@
       const planOutput = document.getElementById("plan-output");
       const dryrunOutput = document.getElementById("dryrun-output");
       const executeOutput = document.getElementById("execute-output");
+      const historyLink = document.getElementById("history-link");
+
+      /* --- Phase 3: 実行履歴 --- */
+      const historyPanel = document.getElementById("history-panel");
+      const showHistoryBtn = document.getElementById("show-history-btn");
+      const refreshHistoryBtn = document.getElementById("refresh-history-btn");
+      const historyList = document.getElementById("history-list");
+      const historyDetail = document.getElementById("history-detail");
+      const historyDetailOutput = document.getElementById("history-detail-output");
 
       let currentDefinition = null;
       let currentPlan = null;
@@ -925,12 +956,76 @@
             return;
           }
           executeOutput.textContent = JSON.stringify(data.result, null, 2);
+          historyLink.style.display = "block";
         } catch (err) {
           executeOutput.textContent = "通信エラー";
         } finally {
           executeBtn.disabled = false;
         }
       };
+
+      /* --- Phase 3: 実行履歴の取得・表示 --- */
+      const loadHistory = async () => {
+        if (!backendBaseUrl) return;
+        historyList.innerHTML = '<p style="color:var(--muted);font-size:14px;">読み込み中...</p>';
+        historyDetail.style.display = "none";
+        try {
+          const resp = await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/executions?limit=20`);
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.executions) {
+            historyList.innerHTML = '<p style="color:#7a2f07;font-size:14px;">取得に失敗しました。</p>';
+            return;
+          }
+          if (data.executions.length === 0) {
+            historyList.innerHTML = '<p style="color:var(--muted);font-size:14px;">実行履歴がありません。</p>';
+            return;
+          }
+          historyList.innerHTML = data.executions.map((exec) => {
+            const started = exec.started_at ? new Date(exec.started_at).toLocaleString("ja-JP") : "-";
+            const statusColor = exec.status === "success" ? "var(--accent)" : (exec.status === "failed" ? "#c0392b" : "var(--muted)");
+            return `<div class="output-card" style="margin-bottom:8px;cursor:pointer;" data-exec-id="${exec.execution_id}">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong style="font-size:14px;">${started}</strong>
+                <span style="font-size:13px;font-weight:600;color:${statusColor};">${exec.status}</span>
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+                ${exec.summary || exec.plan_id} &mdash; ${exec.step_count} step(s)
+              </div>
+            </div>`;
+          }).join("");
+          historyList.querySelectorAll("[data-exec-id]").forEach((el) => {
+            el.addEventListener("click", () => loadHistoryDetail(el.dataset.execId));
+          });
+        } catch (err) {
+          historyList.innerHTML = '<p style="color:#7a2f07;font-size:14px;">通信エラー</p>';
+        }
+      };
+
+      const loadHistoryDetail = async (executionId) => {
+        if (!backendBaseUrl) return;
+        historyDetail.style.display = "block";
+        historyDetailOutput.textContent = "読み込み中...";
+        try {
+          const resp = await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/executions/${executionId}`);
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            historyDetailOutput.textContent = `エラー (${resp.status})`;
+            return;
+          }
+          historyDetailOutput.textContent = JSON.stringify(data, null, 2);
+        } catch (err) {
+          historyDetailOutput.textContent = "通信エラー";
+        }
+      };
+
+      const showHistory = () => {
+        historyPanel.style.display = "block";
+        loadHistory();
+        historyPanel.scrollIntoView({ behavior: "smooth" });
+      };
+
+      showHistoryBtn.addEventListener("click", showHistory);
+      refreshHistoryBtn.addEventListener("click", loadHistory);
 
       planBtn.addEventListener("click", handlePlan);
       dryrunBtn.addEventListener("click", handleDryRun);
