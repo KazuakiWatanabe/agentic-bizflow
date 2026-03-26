@@ -87,28 +87,6 @@ Cloud Run と Vertex AI（Gemini）を用いて、企業業務への適用を前
 
 Phase 2.5 では、GeneratorAgent が出力する BusinessDefinition の「その先」を実装しました。
 
-### 追加アーキテクチャ
-
-```mermaid
-flowchart TB
-  BD[BusinessDefinition] --> EP[ExecutionPlanner]
-  EP --> PLAN[ExecutionPlan]
-  PLAN --> DRY[DryRun]
-  PLAN --> APPROVAL[ApprovalCheck]
-  APPROVAL -->|approved| WR[WorkloadRunner]
-  WR --> CA[Connector Adapter]
-  CA --> MC[Mock Connector]
-  WR --> ER[ExecutionResult]
-```
-
-### 追加 API エンドポイント
-
-| エンドポイント | 処理 |
-|---|---|
-| `POST /api/plan` | BusinessDefinition → ExecutionPlan |
-| `POST /api/dry-run` | 副作用なしのプレビュー |
-| `POST /api/execute` | mock connector による本実行 |
-
 ### Workload Catalog（5 種類）
 
 `tag.assign` / `broadcast.schedule` / `scenario.create` / `scenario.start` / `reminder.create`
@@ -118,15 +96,96 @@ flowchart TB
 - **3 層分離**: Agent 層（変更なし）→ Executor 層 → Connector 層
 - **dry-run**: 副作用なしで実行計画をプレビュー可能
 - **承認フロー**: `broadcast.schedule` は常に承認必須
-- **mock connector**: 外部 API を呼ばず、全 workload kind の疎通を検証可能
 
 詳細は [`docs/phase2.5/phase2_5_design.md`](docs/phase2.5/phase2_5_design.md) を参照。
 
-## 11. 今後の拡張
+## 11. Phase 3: Stateful Execution Platform（実装済み）
 
-- 非同期ジョブキュー対応（Cloud Tasks / Pub/Sub）
-- 本番 LINE connector 実装
+Phase 3 では、メモリ上の一時オブジェクトだった実行計画・実行結果を DB に永続化し、「状態を持つ実行基盤」に拡張しました。
+
+### 追加アーキテクチャ
+
+```mermaid
+flowchart TB
+    UI[Frontend / API Client] --> API[FastAPI]
+
+    API --> CONVERT[POST /api/convert]
+    API --> PLAN_EP[POST /api/plan]
+    API --> DRYRUN_EP[POST /api/dry-run]
+    API --> EXEC_EP[POST /api/execute]
+    API --> HISTORY_EP[GET /api/executions]
+
+    CONVERT --> ORCH[Orchestrator]
+    ORCH --> BD[BusinessDefinition]
+
+    PLAN_EP --> EP[ExecutionPlanner]
+    BD --> EP
+    EP --> PLAN[ExecutionPlan]
+    EP --> DB_PLAN[(execution_plans)]
+
+    DRYRUN_EP --> WR_DRY[WorkloadRunner dry_run=True]
+    PLAN --> WR_DRY
+    WR_DRY --> PREVIEW[DryRunPreview]
+
+    EXEC_EP --> WR[WorkloadRunner dry_run=False]
+    PLAN --> WR
+    WR --> CONN[DB Connector]
+    CONN --> DB_DOMAIN[(scenarios / broadcasts / reminders / tags)]
+    WR --> DB_RESULT[(execution_results + step_results)]
+
+    HISTORY_EP --> DB_RESULT
+```
+
+### Phase 3 で解決した課題
+
+| 課題 | Phase 2.5 | Phase 3 |
+|---|---|---|
+| 実行計画の保存 | メモリ上のみ | DB に保存し後から参照可能 |
+| 実行結果の保存 | レスポンスで返すだけ | DB に履歴として蓄積 |
+| workload の状態管理 | mock が即座に成功を返す | DB 上で状態遷移 |
+| 実行の追跡 | なし | API で実行履歴を照会可能 |
+
+### 追加 API エンドポイント
+
+| エンドポイント | 処理 |
+|---|---|
+| `POST /api/plan` | BusinessDefinition → ExecutionPlan（DB 保存） |
+| `POST /api/dry-run` | 副作用なしのプレビュー |
+| `POST /api/execute` | DB Connector による本実行（結果を DB 保存） |
+| `GET /api/plans` | 保存済み plan 一覧 |
+| `GET /api/plans/{plan_id}` | plan 詳細 |
+| `GET /api/executions` | 実行履歴一覧 |
+| `GET /api/executions/{execution_id}` | 実行詳細（step_results 含む） |
+
+### DB 構成
+
+SQLAlchemy + Alembic を使用。開発環境は SQLite、本番は `DATABASE_URL` で切替可能。
+
+**実行管理テーブル:**
+- `execution_plans` — 実行計画の永続化
+- `execution_results` — 実行結果の永続化
+- `step_results` — ステップごとの実行結果
+
+**workload ドメインテーブル:**
+- `scenarios` / `scenario_steps` / `scenario_enrollments` — ステップ配信シナリオ
+- `broadcasts` — 一斉配信（status=scheduled で登録）
+- `reminders` / `reminder_steps` / `reminder_enrollments` / `reminder_deliveries` — リマインダー
+- `tags` / `tag_assignments` — タグ管理
+
+### 設計の特徴
+
+- **Agent 層は変更なし**: 既存の Reader → Planner → Validator → Generator パイプラインはそのまま維持
+- **DB Connector**: mock connector を DB 書き込み connector に進化させ、実行結果がドメインテーブルに永続化される
+- **状態遷移**: execution_plans.status が created → executing → completed/failed と遷移
+- **原子性**: connector 内は flush のみ、route レベルで commit し、全 step の一貫性を保証
+
+詳細は [`docs/phase3/phase3_design.md`](docs/phase3/phase3_design.md) を参照。
+
+## 12. 今後の拡張
+
+- Cron による配信消化（broadcasts → sending → sent、scenario step 進行）
+- 本番 LINE API connector 実装
 - 承認ワークフローの永続化
-- 実行履歴の DB 保存
+- 非同期ジョブキュー対応（Cloud Tasks / Pub/Sub）
 - ERP / 会計システム連携
 - 社内業務自動化への展開

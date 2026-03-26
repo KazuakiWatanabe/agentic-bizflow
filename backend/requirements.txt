@@ -1,5 +1,7 @@
+alembic
 fastapi
 google-genai
 pydantic>=2
 python-dotenv
+sqlalchemy>=2.0
 uvicorn[standard]

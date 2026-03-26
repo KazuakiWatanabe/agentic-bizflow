@@ -10,33 +10,39 @@ WorkloadRunner を dry_run=True で実行する。
 Note:
     - dry-run は承認なしでも常に実行可能
     - connector の dry_run() メソッドを使用する
+    - Phase 3 では DBLineConnector を使用するが、dry-run 時は DB 書き込みしない
 """
 
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
 
+from app.connectors.db_line_connector import DBLineConnector
 from app.connectors.mock_internal_job_connector import MockInternalJobConnector
-from app.connectors.mock_line_connector import MockLineConnector
+from app.db.session import get_db
 from app.execution.workload_runner import WorkloadRunner
 from app.schemas.execution_plan import ExecutionPlan
 
 router = APIRouter()
 
 
-def _build_runner() -> WorkloadRunner:
-    """デフォルトの connector registry を持つ WorkloadRunner を生成する。
+def _build_runner(db: Session) -> WorkloadRunner:
+    """DB 対応の connector registry を持つ WorkloadRunner を生成する。
+
+    Args:
+        db: SQLAlchemy セッション
 
     Returns:
         WorkloadRunner インスタンス
 
     Note:
-        - Phase 2.5 では mock connector のみ登録する
+        - line connector は DBLineConnector を使用する
+        - dry-run 時は DB 書き込みを行わない
     """
-    # connector registry に mock connector を登録
     registry = {
-        "line": MockLineConnector(),
+        "line": DBLineConnector(db=db),
         "internal_job": MockInternalJobConnector(),
     }
     return WorkloadRunner(registry=registry)
@@ -76,11 +82,15 @@ class DryRunResponse(BaseModel):
 
 
 @router.post("/dry-run", response_model=DryRunResponse)
-def dry_run(request: DryRunRequest) -> DryRunResponse:
+def dry_run(
+    request: DryRunRequest,
+    db: Session = Depends(get_db),
+) -> DryRunResponse:
     """ExecutionPlan の dry-run を実行する。
 
     Args:
         request: ExecutionPlan を含むリクエスト
+        db: DB セッション（DI）
 
     Returns:
         DryRunResponse: DryRunPreview を含むレスポンス
@@ -98,9 +108,9 @@ def dry_run(request: DryRunRequest) -> DryRunResponse:
 
     Note:
         - dry-run は承認なしでも常に実行可能
+        - DB 書き込みは一切行わない
     """
     try:
-        # dict から ExecutionPlan を復元
         plan = ExecutionPlan(**request.plan)
     except Exception as exc:
         raise HTTPException(
@@ -108,8 +118,7 @@ def dry_run(request: DryRunRequest) -> DryRunResponse:
             detail="invalid execution plan format",
         ) from exc
 
-    # WorkloadRunner で dry-run を実行
-    runner = _build_runner()
+    runner = _build_runner(db)
     try:
         result = runner.run(plan, dry_run=True)
     except Exception as exc:

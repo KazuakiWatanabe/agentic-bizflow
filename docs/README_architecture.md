@@ -187,52 +187,143 @@ agentic-bizflow/
 
 Phase 2.5 では、GeneratorAgent の出力（BusinessDefinition）を実行可能な形に変換する Executor 層を追加しました。
 
-### 追加アーキテクチャ
-
-```mermaid
-flowchart TB
-  BD[BusinessDefinition] --> EP[ExecutionPlanner]
-  EP --> PLAN[ExecutionPlan]
-
-  PLAN --> DRY[DryRun Evaluator]
-  PLAN --> APPROVAL[Approval Check]
-  APPROVAL -->|approved| WR[WorkloadRunner]
-  APPROVAL -->|blocked| BLOCK[Blocked Response]
-
-  WR --> CA[Connector Adapter]
-  CA --> MC[Mock Connector]
-  CA --> LINE[LINE Connector ※将来]
-  WR --> ER[ExecutionResult]
-  DRY --> PREVIEW[DryRun Preview]
-```
-
 ### 3 層分離
 
 | 層 | 責務 |
 |---|---|
 | Agent 層（既存・変更なし） | 自然文 → BusinessDefinition |
 | Executor 層（新規） | BusinessDefinition → ExecutionPlan → ExecutionResult |
-| Connector 層（新規） | 外部システムとの接続（mock / 将来の本番実装） |
-
-### 追加 API エンドポイント
-
-```
-POST /api/plan      → ExecutionPlan（新規）
-POST /api/dry-run   → DryRunPreview（新規）
-POST /api/execute   → ExecutionResult（新規）
-```
-
-### ディレクトリ構成（追加分）
-
-```text
-backend/app/
-  schemas/          # ExecutionPlan / ExecutionResult / ConnectorCapability
-  execution/        # ExecutionPlanner / WorkloadRunner / ApprovalCheck
-  connectors/       # BaseConnector / MockLineConnector / MockInternalJobConnector
-  api/              # routes_plan / routes_dry_run / routes_execute
-```
+| Connector 層（新規） | 外部システムとの接続（mock / DB / 将来の本番実装） |
 
 詳細設計は [`docs/phase2.5/phase2_5_design.md`](phase2.5/phase2_5_design.md) を参照。
+
+## Phase 3: Stateful Execution Platform
+
+Phase 3 では、SQLAlchemy + Alembic による DB 永続化層を追加し、実行計画・実行結果・workload の状態を DB で管理する構成に拡張しました。
+
+### Phase 3 アーキテクチャ
+
+```mermaid
+flowchart TB
+    UI[Frontend / API Client] --> API[FastAPI]
+
+    API --> CONVERT[POST /api/convert]
+    API --> PLAN_EP[POST /api/plan]
+    API --> DRYRUN_EP[POST /api/dry-run]
+    API --> EXEC_EP[POST /api/execute]
+    API --> HISTORY_EP[GET /api/executions]
+
+    CONVERT --> ORCH[Orchestrator]
+    ORCH --> BD[BusinessDefinition]
+
+    PLAN_EP --> EP[ExecutionPlanner]
+    BD --> EP
+    EP --> PLAN[ExecutionPlan]
+    EP --> DB_PLAN[(execution_plans)]
+
+    DRYRUN_EP --> WR_DRY[WorkloadRunner dry_run=True]
+    PLAN --> WR_DRY
+    WR_DRY --> PREVIEW[DryRunPreview]
+
+    EXEC_EP --> WR[WorkloadRunner dry_run=False]
+    PLAN --> WR
+    WR --> CONN[DB Connector]
+    CONN --> DB_DOMAIN[(scenarios / broadcasts / reminders / tags)]
+    WR --> DB_RESULT[(execution_results + step_results)]
+
+    HISTORY_EP --> DB_RESULT
+```
+
+### workload 実行シーケンス（例: tag.assign + broadcast.schedule）
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Runner as WorkloadRunner
+    participant Conn as DB Connector
+    participant DB
+
+    Client->>API: POST /api/execute {plan, approved: true}
+    API->>DB: UPDATE execution_plans SET status = 'executing'
+
+    API->>Runner: run(plan)
+
+    Runner->>Conn: execute(tag.assign, inputs)
+    Conn->>DB: UPSERT tags + INSERT tag_assignments
+    Conn-->>Runner: {status: success}
+
+    Runner->>Conn: execute(broadcast.schedule, inputs)
+    Conn->>DB: INSERT broadcasts (status=scheduled)
+    Conn-->>Runner: {status: success}
+
+    API->>DB: INSERT execution_results + step_results
+    API->>DB: UPDATE execution_plans SET status = 'completed'
+    API-->>Client: ExecutionResult
+```
+
+### API エンドポイント一覧
+
+| エンドポイント | メソッド | 処理 |
+|---|---|---|
+| `/api/convert` | POST | 自然文 → BusinessDefinition |
+| `/api/plan` | POST | BusinessDefinition → ExecutionPlan（DB 保存） |
+| `/api/dry-run` | POST | 副作用なしのプレビュー |
+| `/api/execute` | POST | DB Connector による本実行（結果を DB 保存） |
+| `/api/plans` | GET | 保存済み plan 一覧 |
+| `/api/plans/{plan_id}` | GET | plan 詳細 |
+| `/api/executions` | GET | 実行履歴一覧 |
+| `/api/executions/{execution_id}` | GET | 実行詳細（step_results 含む） |
+| `/health` | GET | ヘルスチェック |
+
+### DB テーブル構成
+
+**実行管理テーブル（agentic-bizflow 固有）:**
+
+| テーブル | 責務 |
+|---|---|
+| `execution_plans` | ExecutionPlan の永続化。status: created → executing → completed/failed |
+| `execution_results` | ExecutionResult の永続化 |
+| `step_results` | 各ステップの実行結果 |
+
+**workload ドメインテーブル（line-harness-oss 参照モデル）:**
+
+| テーブル | 責務 |
+|---|---|
+| `tags` / `tag_assignments` | タグ管理。tag.assign で UPSERT |
+| `scenarios` / `scenario_steps` | ステップ配信シナリオ。scenario.create で作成 |
+| `scenario_enrollments` | 対象者のシナリオ登録。scenario.start で active 登録 |
+| `broadcasts` | 一斉配信。broadcast.schedule で status=scheduled 登録 |
+| `reminders` / `reminder_steps` | リマインダー。reminder.create で作成 |
+| `reminder_enrollments` / `reminder_deliveries` | リマインダー登録・配信記録 |
+
+### ディレクトリ構成（Phase 3 追加分）
+
+```text
+backend/
+  alembic.ini                  # Alembic 設定
+  app/
+    db/                        # DB 基盤（新規）
+      base.py                  # DeclarativeBase
+      session.py               # engine / SessionLocal / get_db
+      models.py                # 全 ORM モデル（13 テーブル）
+      repositories/            # ドメインごとの CRUD
+        execution_repo.py      # plan / result の CRUD
+        tag_repo.py            # タグ CRUD
+        broadcast_repo.py      # 配信 CRUD
+        scenario_repo.py       # シナリオ CRUD
+        reminder_repo.py       # リマインダー CRUD
+      migrations/              # Alembic マイグレーション
+        versions/
+          001_execution_tables.py
+          002_workload_tables.py
+    connectors/
+      db_line_connector.py     # DB 書き込み connector（新規）
+    api/
+      routes_history.py        # 実行履歴照会 API（新規）
+```
+
+詳細設計は [`docs/phase3/phase3_design.md`](phase3/phase3_design.md) を参照。
 
 ## Limitations & Next steps（制約と今後）
 
@@ -240,9 +331,10 @@ backend/app/
 - IDトークンの署名検証は未実装（デモ優先）
 - Role推定はヒューリスティック。業務別ルール拡張が必要
 - エンティティ抽出（org/date/amount）を今後拡張可能
-- 本番 LINE connector の実装（Phase 3）
-- 承認ワークフローの永続化（Phase 3）
-- 非同期ジョブキュー対応（Phase 3）
+- Cron による配信消化（broadcasts → sent、scenario step 進行）— Phase 4
+- 本番 LINE API connector の実装 — Phase 4
+- 承認ワークフローの永続化 — Phase 4
+- 非同期ジョブキュー対応（Cloud Tasks / Pub/Sub）— Phase 4
 
 ## License
 
