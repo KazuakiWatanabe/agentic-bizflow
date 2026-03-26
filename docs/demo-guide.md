@@ -213,7 +213,45 @@ conn.close()
 
 ---
 
-## 7. DB のリセット
+## 7. 管理 UI（Streamlit）
+
+バックエンド起動中に別ターミナルで:
+
+```bash
+pip install streamlit requests
+streamlit run admin/app.py
+```
+
+ブラウザで http://localhost:8501 が開きます。
+
+### 画面一覧
+
+| 画面 | 内容 |
+|---|---|
+| Workload サマリー | シナリオ・配信・リマインダー・タグの統合カウント |
+| 実行履歴 | 実行結果の一覧・詳細展開 |
+| 承認管理 | 承認待ち一覧と承認/却下ボタン |
+| Worker 状態 | Scheduler の実行ログ |
+| ドメイン管理 | Workload Kind 一覧 / Domain 設定 |
+| 業務文章変換 | テキスト入力 → 変換 → 計画 → dry-run → 実行の全フロー |
+
+---
+
+## 8. Workload 状態 API
+
+実行後の workload の状態を確認する API:
+
+```bash
+# 統合サマリー
+curl -s http://localhost:8080/api/workloads/summary | python -m json.tool
+
+# Worker 実行状態
+curl -s http://localhost:8080/api/workers/status | python -m json.tool
+```
+
+---
+
+## 9. DB のリセット
 
 データを全て削除して最初からやり直す場合:
 
@@ -222,6 +260,58 @@ cd backend
 rm -f dev.db
 python -m alembic upgrade head
 ```
+
+---
+
+## 10. 完成デモ（管理 UI 一気通貫）
+
+バックエンド + Streamlit 管理 UI を同時に起動し、以下のフローを実行します。
+
+### 準備
+
+**ターミナル 1（バックエンド）:**
+```bash
+cd backend
+rm -f dev.db
+python -m alembic upgrade head
+python -m uvicorn app.main:app --port 8080
+```
+
+**ターミナル 2（管理 UI）:**
+```bash
+pip install streamlit requests
+streamlit run admin/app.py
+```
+
+### デモ手順
+
+1. **管理 UI** → サイドバーで「業務文章変換」を選択
+2. テキスト入力欄に以下を入力:
+   ```
+   セミナー参加者にVIPタグをつけて、全員にセール告知を一斉配信して
+   ```
+3. 「変換」ボタン → BusinessDefinition が JSON で表示される
+4. 「実行計画を生成」ボタン → ExecutionPlan が表示される（tag.assign + broadcast.schedule）
+5. サイドバーで「承認管理」を選択 → broadcast.schedule の承認待ちが表示される
+6. 「承認」ボタンをクリック → status が approved に変わる
+7. サイドバーで「業務文章変換」に戻る
+8. 「Dry-run」ボタン → 副作用なしのプレビューが表示される
+9. 「本実行」ボタン → ExecutionResult が表示される（2 step とも success）
+10. サイドバーで「実行履歴」を選択 → 実行結果が一覧表示される
+11. 実行結果を展開 → step_results（tag.assign: success, broadcast.schedule: success）が確認できる
+12. サイドバーで「Workload サマリー」を選択 → tags: 1, broadcasts: scheduled 1 が確認できる
+
+### 確認ポイント
+
+| 確認項目 | 期待値 |
+|---|---|
+| execution_plans | 1 件（status=completed） |
+| approval_requests | 1 件（status=approved） |
+| tags | 1 件（VIP タグ） |
+| tag_assignments | 1 件 |
+| broadcasts | 1 件（status=scheduled） |
+| execution_results | 1 件（status=success） |
+| step_results | 2 件 |
 
 ---
 

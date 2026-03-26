@@ -8,7 +8,8 @@ LINE Messaging API Connector を提供する。
 制約: LINE_CHANNEL_ACCESS_TOKEN が必要。
 
 Note:
-    - Phase 4 では枠組みのみ実装する
+    - tag.assign は DB 書き込み + LINE API 呼び出しを行う
+    - その他の DB 書き込みアクションは DBLineConnector に委譲する
     - デフォルトは db モード（live はオプトイン）
     - テストでは LINE API を mock して検証する
 """
@@ -17,6 +18,7 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
+import httpx
 from sqlalchemy.orm import Session
 
 from app.connectors.base_connector import BaseConnector
@@ -83,13 +85,17 @@ class LiveLineConnector(BaseConnector):
             実行結果 dict
 
         Note:
-            - DB 書き込み可能なアクションは DBLineConnector に委譲する
+            - tag.assign は DB 書き込み + LINE API 呼び出しを行う
+            - その他の DB 書き込みアクションは DBLineConnector に委譲する
             - broadcast.send / scenario.deliver / reminder.deliver は
               LINE API 呼び出しを行う（将来実装）
         """
-        # DB 書き込み系のアクション（Phase 3 互換）
+        # tag.assign は DB + LINE API の両方を実行
+        if action == "tag.assign" and self._db_connector:
+            return self._execute_line_tag_assign(inputs)
+
+        # その他の DB 書き込み系アクション（Phase 3 互換）
         db_actions = {
-            "tag.assign",
             "broadcast.schedule",
             "scenario.create",
             "scenario.start",
@@ -136,6 +142,74 @@ class LiveLineConnector(BaseConnector):
             supports_rollback=False,
             supports_schedule=True,
         )
+
+    def _execute_line_tag_assign(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """tag.assign を DB + LINE API で実行する。
+
+        DB connector で先にローカル書き込みを行い、
+        その後 LINE API にタグ付与リクエストを送信する。
+
+        Args:
+            inputs: tag_name, target を含む入力パラメータ
+
+        Returns:
+            実行結果 dict
+
+        Variables:
+            db_result: DB 書き込みの結果
+            tag_name: 付与するタグ名
+            target_id: 対象者 ID
+            url: LINE API のタグ付与エンドポイント URL
+            headers: LINE API リクエストヘッダ
+
+        Note:
+            - DB 書き込みを先に行い、成功後に LINE API を呼び出す
+            - LINE API が失敗しても DB 書き込みは成功扱いとする（警告ログ出力）
+            - LINE_CHANNEL_ACCESS_TOKEN が空の場合は LINE API 呼び出しをスキップする
+        """
+        # まず DB に書き込む
+        db_result = self._db_connector.execute("tag.assign", inputs)
+        if db_result.get("status") != "success":
+            return db_result
+
+        # LINE API 呼び出し
+        if not LINE_CHANNEL_ACCESS_TOKEN:
+            logger.warning(
+                "LINE_CHANNEL_ACCESS_TOKEN 未設定: tag.assign の LINE API 呼び出しをスキップ"
+            )
+            return db_result
+
+        tag_name = inputs.get("tag_name", "")
+        target_id = inputs.get("target", "default_target")
+
+        # LINE API タグ付与エンドポイント（プレースホルダー URL）
+        url = f"{LINE_API_BASE}/richmenu/tag/assign"
+        headers = {
+            "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "tag_name": tag_name,
+            "target_id": target_id,
+        }
+
+        try:
+            with httpx.Client() as client:
+                response = client.post(url, json=payload, headers=headers, timeout=10)
+                response.raise_for_status()
+            logger.info(
+                "LINE API tag.assign 成功: tag=%s, target=%s",
+                tag_name,
+                target_id,
+            )
+        except Exception as exc:
+            # LINE API 失敗時も DB 書き込みは成功扱い
+            logger.warning(
+                "LINE API tag.assign 失敗（DB 書き込みは成功）: %s",
+                str(exc),
+            )
+
+        return db_result
 
     def _execute_line_api(self, action: str, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """LINE API を呼び出す（枠組み）。
