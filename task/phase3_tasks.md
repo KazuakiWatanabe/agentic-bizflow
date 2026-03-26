@@ -1,7 +1,7 @@
 # Phase 3: Stateful Execution Platform — 実装タスク
 
 > **設計の参照先:** `docs/phase3/phase3_design.md`
-> **全体ロードマップ:** `docs/roadmap.md`
+> **全体ロードマップ:** `docs/roadmap-phase2_5-to-phase5.md`
 > **最上位ルール:** `AGENTS.md`
 > **実務ガイド:** `CLAUDE.md`
 

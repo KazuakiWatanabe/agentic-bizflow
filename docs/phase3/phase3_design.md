@@ -1,7 +1,7 @@
 # Phase 3: Stateful Execution Platform — 設計書
 
 > **前提:** Phase 2.5（ExecutionPlanner / WorkloadRunner / mock connector）が完了していること
-> **全体ロードマップ:** `docs/roadmap.md`
+> **全体ロードマップ:** `docs/roadmap-phase2_5-to-phase5.md`
 > **参照モデル:** `docs/ref/line-harness-oss/`
 > **最上位ルール:** `AGENTS.md`
 
