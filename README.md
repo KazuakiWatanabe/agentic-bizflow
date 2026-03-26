@@ -181,11 +181,42 @@ SQLAlchemy + Alembic を使用。開発環境は SQLite、本番は `DATABASE_UR
 
 詳細は [`docs/phase3/phase3_design.md`](docs/phase3/phase3_design.md) を参照。
 
-## 12. 今後の拡張
+## 12. Phase 4: Async Execution Engine（実装済み）
 
-- Cron による配信消化（broadcasts → sending → sent、scenario step 進行）
-- 本番 LINE API connector 実装
-- 承認ワークフローの永続化
-- 非同期ジョブキュー対応（Cloud Tasks / Pub/Sub）
+Phase 4 では、Phase 3 で DB に「登録」された業務オブジェクトをバックグラウンドで安全に消化する仕組みを構築しました。
+
+### 追加機能
+
+- **Scheduler / Worker**: APScheduler で 5 分間隔の定期処理（scenario step 配信 / broadcast 送信 / reminder 配信）
+- **承認ワークフロー永続化**: `approval_requests` テーブルで承認状態を管理、approve / reject API
+- **冪等性チェック**: `processed_idempotency_keys` テーブルで二重実行を防止
+- **監査ログ**: `execution_audit_logs` テーブルで全操作の証跡を記録
+- **配信ウィンドウ**: 9:00-23:00 JST の配信制御
+- **再試行**: retry_count / max_retries による失敗再試行（指数バックオフ）
+- **Connector Registry**: 環境変数 `LINE_CONNECTOR_MODE` で mock / db / live を切替可能
+- **LINE Connector 枠組み**: 本番 LINE Messaging API 接続の準備
+
+### 追加 API エンドポイント
+
+| エンドポイント | 処理 |
+|---|---|
+| `GET /api/approvals` | 承認リクエスト一覧（status フィルタ対応） |
+| `GET /api/approvals/{id}` | 承認リクエスト詳細 |
+| `POST /api/approvals/{id}/approve` | 承認 |
+| `POST /api/approvals/{id}/reject` | 却下 |
+
+### 状態遷移
+
+- **broadcasts**: scheduled → sending → sent（Scheduler が消化）
+- **scenario_enrollments**: active → step 進行 → completed（Worker が配信）
+- **reminder_enrollments**: active → 全 step 配信 → completed（Worker が配信）
+
+詳細は [`docs/phase4/phase4_design.md`](docs/phase4/phase4_design.md) を参照。
+
+## 13. 今後の拡張
+
+- Cloud Scheduler + Cloud Run Jobs への移行（Scheduler 方式 A）
+- automations / scoring / notification_rules（Phase 5）
+- マルチドメイン connector 対応（Phase 5）
 - ERP / 会計システム連携
 - 社内業務自動化への展開

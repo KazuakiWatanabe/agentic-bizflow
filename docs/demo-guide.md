@@ -38,6 +38,16 @@ cd backend
 python -m uvicorn app.main:app --reload --port 8080
 ```
 
+> **注意:** コードを変更した場合（ブランチ切替・Phase 更新など）は、サーバーを一度停止して再起動してください。`--reload` はファイル変更を検知しますが、古いプロセスが残っていると新しいルートが認識されないことがあります。
+>
+> ```bash
+> # Windows の場合
+> taskkill /F /IM python.exe
+> # 再起動
+> cd backend
+> python -m uvicorn app.main:app --reload --port 8080
+> ```
+
 起動後、以下の URL でアクセスできます。
 
 | URL | 内容 |

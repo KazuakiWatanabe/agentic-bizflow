@@ -11,9 +11,11 @@ Variables:
 
 Note:
     - CORS_ALLOW_ORIGINS が未設定または "*" の場合は全許可とする
+    - SCHEDULER_ENABLED=true のとき Scheduler を起動する
 """
 
 import os
+from contextlib import asynccontextmanager
 from typing import List
 
 from dotenv import load_dotenv
@@ -21,6 +23,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.convert import router as convert_router
+from app.api.routes_approval import router as approval_router
 from app.api.routes_dry_run import router as dry_run_router
 from app.api.routes_execute import router as execute_router
 from app.api.routes_history import router as history_router
@@ -54,6 +57,22 @@ def _parse_cors_origins(value: str) -> List[str]:
     return [origin.strip() for origin in cleaned.split(",") if origin.strip()]
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """アプリのライフスパンイベントを管理する。
+
+    起動時に Scheduler を開始し、シャットダウン時に停止する。
+
+    Note:
+        - SCHEDULER_ENABLED=true のとき Scheduler を起動する
+    """
+    from app.workers.scheduler import start_scheduler, stop_scheduler
+
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
 def create_app() -> FastAPI:
     """FastAPIアプリを生成する。
 
@@ -75,7 +94,7 @@ def create_app() -> FastAPI:
     Note:
         - CORS_ALLOW_ORIGINS を環境変数から読み込み、必要に応じて全許可とする
     """
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
     origins = _parse_cors_origins(os.getenv("CORS_ALLOW_ORIGINS", "*"))
     app.add_middleware(
         CORSMiddleware,
@@ -89,6 +108,7 @@ def create_app() -> FastAPI:
     app.include_router(dry_run_router, prefix="/api")
     app.include_router(execute_router, prefix="/api")
     app.include_router(history_router, prefix="/api")
+    app.include_router(approval_router, prefix="/api")
     app.add_api_route("/health", health, methods=["GET"])
     return app
 

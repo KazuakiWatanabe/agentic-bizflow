@@ -460,6 +460,19 @@
         </div>
       </section>
 
+      <section class="panel output-panel" id="approval-panel" style="display:none;">
+        <div class="panel-head">
+          <h2>承認待ち (Phase 4)</h2>
+          <p>承認が必要な実行計画を確認・承認・却下します。</p>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <button class="ghost" id="refresh-approvals-btn" type="button">更新</button>
+        </div>
+        <div id="approval-list">
+          <p style="color:var(--muted);font-size:14px;">読み込み中...</p>
+        </div>
+      </section>
+
       <section class="panel output-panel" id="history-panel" style="display:none;">
         <div class="panel-head">
           <h2>実行履歴 (Phase 3)</h2>
@@ -864,6 +877,11 @@
       const executeOutput = document.getElementById("execute-output");
       const historyLink = document.getElementById("history-link");
 
+      /* --- Phase 4: 承認待ち --- */
+      const approvalPanel = document.getElementById("approval-panel");
+      const refreshApprovalsBtn = document.getElementById("refresh-approvals-btn");
+      const approvalList = document.getElementById("approval-list");
+
       /* --- Phase 3: 実行履歴 --- */
       const historyPanel = document.getElementById("history-panel");
       const showHistoryBtn = document.getElementById("show-history-btn");
@@ -909,6 +927,8 @@
           executeBtn.disabled = false;
           if (currentPlan.requires_approval) {
             approvalWarning.style.display = "block";
+            approvalPanel.style.display = "block";
+            loadApprovals();
           }
         } catch (err) {
           planOutput.textContent = "通信エラー";
@@ -963,6 +983,56 @@
           executeBtn.disabled = false;
         }
       };
+
+      /* --- Phase 4: 承認待ちの取得・承認・却下 --- */
+      const loadApprovals = async () => {
+        if (!backendBaseUrl) return;
+        approvalList.innerHTML = '<p style="color:var(--muted);font-size:14px;">読み込み中...</p>';
+        try {
+          const resp = await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/approvals?status=pending`);
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data.approvals) {
+            approvalList.innerHTML = '<p style="color:#7a2f07;font-size:14px;">取得に失敗しました。</p>';
+            return;
+          }
+          if (data.approvals.length === 0) {
+            approvalList.innerHTML = '<p style="color:var(--muted);font-size:14px;">承認待ちはありません。</p>';
+            return;
+          }
+          approvalList.innerHTML = data.approvals.map((a) => {
+            const requested = a.requested_at ? new Date(a.requested_at).toLocaleString("ja-JP") : "-";
+            return `<div class="output-card" style="margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong style="font-size:14px;">${requested}</strong>
+                <span style="font-size:13px;font-weight:600;color:var(--accent-2);">pending</span>
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;">Plan: ${a.plan_id}</div>
+              <div style="display:flex;gap:6px;margin-top:8px;">
+                <button class="ghost" style="padding:6px 14px;font-size:12px;" onclick="handleApprove('${a.id}')">承認</button>
+                <button class="ghost" style="padding:6px 14px;font-size:12px;color:#c0392b;" onclick="handleReject('${a.id}')">却下</button>
+              </div>
+            </div>`;
+          }).join("");
+        } catch (err) {
+          approvalList.innerHTML = '<p style="color:#7a2f07;font-size:14px;">通信エラー</p>';
+        }
+      };
+
+      window.handleApprove = async (approvalId) => {
+        try {
+          await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/approvals/${approvalId}/approve`, { method: "POST" });
+          loadApprovals();
+        } catch (err) { /* ignore */ }
+      };
+
+      window.handleReject = async (approvalId) => {
+        try {
+          await fetch(`${normalizeBaseUrl(backendBaseUrl)}/api/approvals/${approvalId}/reject`, { method: "POST" });
+          loadApprovals();
+        } catch (err) { /* ignore */ }
+      };
+
+      refreshApprovalsBtn.addEventListener("click", loadApprovals);
 
       /* --- Phase 3: 実行履歴の取得・表示 --- */
       const loadHistory = async () => {
