@@ -213,10 +213,37 @@ Phase 4 では、Phase 3 で DB に「登録」された業務オブジェクト
 
 詳細は [`docs/phase4/phase4_design.md`](docs/phase4/phase4_design.md) を参照。
 
-## 13. 今後の拡張
+## 13. Phase 5: Multi-Domain Execution Platform（実装済み）
 
-- Cloud Scheduler + Cloud Run Jobs への移行（Scheduler 方式 A）
-- automations / scoring / notification_rules（Phase 5）
-- マルチドメイン connector 対応（Phase 5）
-- ERP / 会計システム連携
+Phase 5 では、LINE 以外の業務ドメインにも同じオーケストレーション層で対応できる共通基盤に拡張しました。
+
+### 追加機能
+
+- **Workload Kind Registry**: workload kind を動的に登録・検索。ドメイン別フィルタ、エイリアス解決に対応
+- **Domain Module 構造**: `domains/line/`, `domains/email/` にドメイン固有コードをパッケージ化
+- **後方互換**: 旧 kind（`tag.assign` 等）は `line.tag.assign` のエイリアスとして動作
+- **Email ドメイン**: Email connector + Worker（`email.broadcast.schedule`, `email.template.create`）
+- **Cross-domain ExecutionPlan**: 1 つの plan に LINE + Email の step が混在可能
+- **Domain 設定テーブル**: `domain_configs` でドメインの有効/無効・設定を管理
+- **ドメイン追加テンプレート**: `domains/_template/` をコピーして新ドメインを追加可能
+
+### 追加 API エンドポイント
+
+| エンドポイント | 処理 |
+|---|---|
+| `GET /api/domains` | 有効なドメイン一覧 |
+| `GET /api/domains/{domain}` | ドメイン詳細 |
+| `PUT /api/domains/{domain}/config` | ドメイン設定更新 |
+| `POST /api/domains/{domain}/enable` | ドメイン有効化 |
+| `POST /api/domains/{domain}/disable` | ドメイン無効化 |
+| `GET /api/workload-kinds` | 全 workload kind 一覧 |
+
+詳細は [`docs/phase5/phase5_design.md`](docs/phase5/phase5_design.md) を参照。
+
+## 14. 今後の拡張
+
+- Cloud Scheduler + Cloud Run Jobs への移行
+- POS / CRM / ERP ドメインの connector 追加（`domains/_template/` からコピー）
+- automations / scoring / notification_rules
+- マルチテナント認証
 - 社内業務自動化への展開

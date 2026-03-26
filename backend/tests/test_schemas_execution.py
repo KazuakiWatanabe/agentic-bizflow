@@ -44,22 +44,26 @@ class TestExecutionStep:
         assert step.kind == "tag.assign"
         assert step.status == "planned"
 
-    def test_異常系_不正なkindでエラーになる(self) -> None:
-        """kind に無効な値を指定した場合に ValidationError になることを確認する。
+    def test_任意のkind文字列でstepが作成できる(self) -> None:
+        """Phase 5: kind が str 型となり、任意の文字列を受け付けることを確認する。
 
         Variables:
-            なし（例外のみ検証）。
+            step: 任意の kind で作成した ExecutionStep。
+
+        Note:
+            - Phase 5 で WorkloadKind を Literal から str に変更した
+            - 検証は Registry 側で行う
         """
-        with pytest.raises(ValidationError):
-            ExecutionStep(
-                step_id="step_001",
-                sequence=1,
-                kind="invalid.kind",
-                connector="line",
-                action="invalid",
-                inputs={},
-                idempotency_key="test-key",
-            )
+        step = ExecutionStep(
+            step_id="step_001",
+            sequence=1,
+            kind="email.broadcast.schedule",
+            connector="email",
+            action="email.broadcast.schedule",
+            inputs={},
+            idempotency_key="test-key",
+        )
+        assert step.kind == "email.broadcast.schedule"
 
     def test_異常系_sequenceが0以下でエラーになる(self) -> None:
         """sequence に 0 を指定した場合に ValidationError になることを確認する。
