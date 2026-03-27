@@ -198,6 +198,100 @@ class TagSummary(BaseModel):
     total_assignments: int
 
 
+class JourneySummary(BaseModel):
+    """ジャーニー（共通語彙）集計サマリ。
+
+    scenarios テーブルの集計を共通語彙にマッピングしたもの。
+
+    Variables:
+        total: ジャーニー総数
+        active_enrollments: active 登録者数
+        completed_enrollments: completed 登録者数
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    total: int
+    active_enrollments: int
+    completed_enrollments: int
+
+
+class CampaignSummary(BaseModel):
+    """キャンペーン（共通語彙）集計サマリ。
+
+    broadcasts テーブルの集計を共通語彙にマッピングしたもの。
+
+    Variables:
+        draft: 下書き件数
+        scheduled: 予約済み件数
+        sending: 送信中件数
+        sent: 送信済み件数
+        failed: 失敗件数
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    draft: int
+    scheduled: int
+    sending: int
+    sent: int
+    failed: int
+
+
+class FollowupSummary(BaseModel):
+    """フォローアップ（共通語彙）集計サマリ。
+
+    reminders テーブルの集計を共通語彙にマッピングしたもの。
+
+    Variables:
+        total: フォローアップ総数
+        active_enrollments: active 登録者数
+        completed_enrollments: completed 登録者数
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    total: int
+    active_enrollments: int
+    completed_enrollments: int
+
+
+class LabelSummary(BaseModel):
+    """ラベル（共通語彙）集計サマリ。
+
+    tags テーブルの集計を共通語彙にマッピングしたもの。
+
+    Variables:
+        total: ラベル総数
+        total_assignments: ラベル付与総数
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    total: int
+    total_assignments: int
+
+
+class CommonSummary(BaseModel):
+    """共通語彙による統合サマリ。
+
+    既存テーブルの集計を共通マーケティング語彙でラップしたもの。
+
+    Variables:
+        journeys: ジャーニー集計（= scenarios のミラー）
+        campaigns: キャンペーン集計（= broadcasts のミラー）
+        followups: フォローアップ集計（= reminders のミラー）
+        labels: ラベル集計（= tags のミラー）
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    journeys: JourneySummary
+    campaigns: CampaignSummary
+    followups: FollowupSummary
+    labels: LabelSummary
+
+
 class WorkloadSummaryResponse(BaseModel):
     """統合サマリレスポンス。
 
@@ -206,6 +300,7 @@ class WorkloadSummaryResponse(BaseModel):
         broadcasts: 配信集計
         reminders: リマインダー集計
         tags: タグ集計
+        common: 共通語彙による集計（既存値のミラー）
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -214,6 +309,7 @@ class WorkloadSummaryResponse(BaseModel):
     broadcasts: BroadcastSummary
     reminders: ReminderSummary
     tags: TagSummary
+    common: CommonSummary
 
 
 # ============================================================
@@ -462,6 +558,13 @@ def get_workload_summary(
     tag_total = db.query(func.count(TagModel.id)).scalar() or 0
     assignment_total = db.query(func.count(TagAssignmentModel.target_id)).scalar() or 0
 
+    # 配信ステータス個別値（common でも再利用する）
+    broadcast_draft = broadcast_counts.get("draft", 0)
+    broadcast_scheduled = broadcast_counts.get("scheduled", 0)
+    broadcast_sending = broadcast_counts.get("sending", 0)
+    broadcast_sent = broadcast_counts.get("sent", 0)
+    broadcast_failed = broadcast_counts.get("failed", 0)
+
     return WorkloadSummaryResponse(
         scenarios=ScenarioSummary(
             total=scenario_total,
@@ -469,11 +572,11 @@ def get_workload_summary(
             completed_enrollments=scenario_completed,
         ),
         broadcasts=BroadcastSummary(
-            draft=broadcast_counts.get("draft", 0),
-            scheduled=broadcast_counts.get("scheduled", 0),
-            sending=broadcast_counts.get("sending", 0),
-            sent=broadcast_counts.get("sent", 0),
-            failed=broadcast_counts.get("failed", 0),
+            draft=broadcast_draft,
+            scheduled=broadcast_scheduled,
+            sending=broadcast_sending,
+            sent=broadcast_sent,
+            failed=broadcast_failed,
         ),
         reminders=ReminderSummary(
             total=reminder_total,
@@ -483,5 +586,28 @@ def get_workload_summary(
         tags=TagSummary(
             total=tag_total,
             total_assignments=assignment_total,
+        ),
+        common=CommonSummary(
+            journeys=JourneySummary(
+                total=scenario_total,
+                active_enrollments=scenario_active,
+                completed_enrollments=scenario_completed,
+            ),
+            campaigns=CampaignSummary(
+                draft=broadcast_draft,
+                scheduled=broadcast_scheduled,
+                sending=broadcast_sending,
+                sent=broadcast_sent,
+                failed=broadcast_failed,
+            ),
+            followups=FollowupSummary(
+                total=reminder_total,
+                active_enrollments=reminder_active,
+                completed_enrollments=reminder_completed,
+            ),
+            labels=LabelSummary(
+                total=tag_total,
+                total_assignments=assignment_total,
+            ),
         ),
     )
