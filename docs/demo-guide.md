@@ -202,7 +202,12 @@ tables = [
     'tags', 'tag_assignments',
     'scenarios', 'scenario_steps', 'scenario_enrollments',
     'broadcasts',
-    'reminders', 'reminder_steps',
+    'reminders', 'reminder_steps', 'reminder_enrollments', 'reminder_deliveries',
+    'approval_requests', 'processed_idempotency_keys',
+    'execution_audit_logs', 'worker_task_logs',
+    'domain_configs',
+    'email_broadcasts', 'email_templates',
+    'contacts', 'contact_channels',
 ]
 for table in tables:
     count = cursor.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]

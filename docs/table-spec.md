@@ -1,6 +1,6 @@
 # Agentic BizFlow — テーブル仕様書
 
-> 本ドキュメントは全 20 テーブルのカラム定義・制約・インデックスを一覧化したものです。
+> 本ドキュメントは全 22 テーブルのカラム定義・制約・インデックスを一覧化したものです。
 
 ---
 
@@ -312,6 +312,7 @@ LINE 一斉配信。
 | display_name | TEXT | NOT NULL | | 表示名 |
 | is_enabled | BOOLEAN | NOT NULL | FALSE | 有効/無効 |
 | config_json | TEXT | NOT NULL | '{}' | ドメイン固有設定（JSON） |
+| priority | INTEGER | NOT NULL | 0 | 解決優先度（小さいほど高優先） |
 | created_at | DATETIME | NOT NULL | | 作成日時 |
 | updated_at | DATETIME | NOT NULL | | 更新日時 |
 
@@ -356,3 +357,37 @@ LINE 一斉配信。
 | body_text | TEXT | | | プレーンテキスト |
 | created_at | DATETIME | NOT NULL | | 作成日時 |
 | updated_at | DATETIME | NOT NULL | | 更新日時 |
+
+---
+
+## 連絡先管理テーブル（Phase 7）
+
+### contacts
+
+チャネル横断の統一連絡先。
+
+| カラム | 型 | 制約 | デフォルト | 説明 |
+|---|---|---|---|---|
+| id | TEXT | PK | | contact_id（UUID） |
+| display_name | TEXT | | | 表示名 |
+| metadata_json | TEXT | NOT NULL | '{}' | 任意のメタデータ（JSON） |
+| created_at | DATETIME | NOT NULL | | 作成日時 |
+| updated_at | DATETIME | NOT NULL | | 更新日時 |
+
+---
+
+### contact_channels
+
+チャネル別の外部 ID。1 つの contact に複数チャネルを紐付ける。
+
+| カラム | 型 | 制約 | デフォルト | 説明 |
+|---|---|---|---|---|
+| id | TEXT | PK | | UUID |
+| contact_id | TEXT | FK → contacts, NOT NULL | | 所属する contact |
+| channel_type | TEXT | NOT NULL | | チャネル種別（line / email 等） |
+| external_id | TEXT | NOT NULL | | チャネル上の外部 ID |
+| created_at | DATETIME | NOT NULL | | 作成日時 |
+
+**UNIQUE 制約:** `(channel_type, external_id)` — `uq_contact_channel`
+
+**インデックス:** `ix_contact_channels_contact_id`
