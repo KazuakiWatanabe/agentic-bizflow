@@ -36,13 +36,18 @@ class WorkloadKindRegistry:
         is_valid: kind が登録済みか判定する
         register_alias: エイリアスを登録する
         resolve_alias: エイリアスを解決する
+        register_resolution: 共通 kind → ドメイン kind マッピングを登録する
+        get_resolution: 共通 kind の resolution マッピングを取得する
+        resolve_to_domain: 共通 kind を特定ドメインの kind に解決する
 
     Variables:
         _kinds: kind → WorkloadKindDefinition のマッピング
         _aliases: 旧 kind → 新 kind のマッピング
+        _resolutions: 共通 kind → {ドメイン → ドメイン固有 kind} のマッピング
 
     Note:
         - エイリアスは get() / is_valid() で自動解決される
+        - resolution は共通 kind をドメイン固有 kind に変換する
     """
 
     def __init__(self) -> None:
@@ -51,6 +56,8 @@ class WorkloadKindRegistry:
         self._kinds: Dict[str, WorkloadKindDefinition] = {}
         # 旧 kind → 新 kind のエイリアスマッピング
         self._aliases: Dict[str, str] = {}
+        # 共通 kind → {ドメイン → ドメイン固有 kind} の解決マッピング
+        self._resolutions: Dict[str, Dict[str, Optional[str]]] = {}
 
     def register(
         self,
@@ -159,6 +166,60 @@ class WorkloadKindRegistry:
             - ExecutionPlanner がキーワードマッチに使用する
         """
         return {d.kind: d.keywords for d in self._kinds.values() if d.keywords}
+
+    def register_resolution(
+        self,
+        common_kind: str,
+        mapping: Dict[str, Optional[str]],
+    ) -> None:
+        """共通 kind のドメイン解決マッピングを登録する。
+
+        Args:
+            common_kind: 共通 workload kind の識別子
+            mapping: {ドメイン名: ドメイン固有 kind} のマッピング
+
+        Note:
+            - mapping の値が None の場合、そのドメインは該当 kind を未サポートとする
+        """
+        self._resolutions[common_kind] = mapping
+        logger.debug(
+            "resolution 登録: %s → %s",
+            common_kind,
+            mapping,
+        )
+
+    def get_resolution(self, common_kind: str) -> Optional[Dict[str, Optional[str]]]:
+        """共通 kind の resolution マッピングを取得する。
+
+        Args:
+            common_kind: 共通 workload kind の識別子
+
+        Returns:
+            {ドメイン名: ドメイン固有 kind} のマッピング、未登録なら None
+        """
+        return self._resolutions.get(common_kind)
+
+    def resolve_to_domain(
+        self,
+        common_kind: str,
+        domain: str,
+    ) -> Optional[str]:
+        """共通 kind を特定ドメインの kind に解決する。
+
+        Args:
+            common_kind: 共通 workload kind の識別子
+            domain: 解決先のドメイン名
+
+        Returns:
+            ドメイン固有の kind、未登録または未サポートなら None
+
+        Note:
+            - resolution マッピングにドメインが存在しない場合も None を返す
+        """
+        mapping = self._resolutions.get(common_kind)
+        if mapping is None:
+            return None
+        return mapping.get(domain)
 
 
 # シングルトンインスタンス

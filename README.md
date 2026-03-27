@@ -184,12 +184,14 @@ Cloud Run と Vertex AI（Gemini）を用いて、企業業務への適用を前
 | Phase 4 | Scheduler / Worker / 承認永続化 / 冪等性 / 監査ログ | [phase4_design.md](docs/phase4/phase4_design.md) |
 | Phase 5 | Multi-Domain（Workload Kind Registry / Email ドメイン） | [phase5_design.md](docs/phase5/phase5_design.md) |
 | Phase 6 | 管理 UI（Streamlit）/ Workload 状態 API / デモ基盤 | [phase6_design.md](docs/phase6/phase6_design.md) |
+| Phase 7 | Marketing Channel Abstraction（共通 kind / 連絡先管理 / kind_resolver） | [phase7_design.md](docs/phase7/phase7_design.md) |
 
 ## 13. 今後の拡張
 
 - Cloud Scheduler + Cloud Run Jobs への移行
 - POS / CRM / ERP ドメインの connector 追加（`domains/_template/` からコピー）
 - automations / scoring / notification_rules
+- Contact → 外部 ID 自動解決による connector 統合
 - マルチテナント認証
 - 社内業務自動化への展開
 

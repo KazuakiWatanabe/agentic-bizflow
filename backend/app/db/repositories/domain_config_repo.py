@@ -167,3 +167,24 @@ class DomainConfigRepository:
         record.updated_at = datetime.now(timezone.utc)
         db.flush()
         return record
+
+    @staticmethod
+    def list_enabled_by_priority(db: Session) -> List[DomainConfigModel]:
+        """有効なドメイン設定一覧を priority 昇順で取得する。
+
+        Args:
+            db: SQLAlchemy セッション
+
+        Returns:
+            priority 昇順で並べた有効な DomainConfigModel のリスト
+
+        Note:
+            - priority が小さいドメインほど優先度が高い
+            - kind_resolver が enabled_domains の順番として使用する
+        """
+        return (
+            db.query(DomainConfigModel)
+            .filter_by(is_enabled=True)
+            .order_by(DomainConfigModel.priority.asc())
+            .all()
+        )

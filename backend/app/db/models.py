@@ -739,6 +739,8 @@ class DomainConfigModel(Base):
     display_name: Mapped[str] = mapped_column(String, nullable=False)
     is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     config_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    # ドメインの優先順位（小さいほど優先）
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow
     )
@@ -826,3 +828,86 @@ class EmailTemplateModel(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow, onupdate=_utcnow
     )
+
+
+# ============================================================
+# Phase 7 テーブル（Marketing Channel Abstraction）
+# ============================================================
+
+
+class ContactModel(Base):
+    """連絡先の永続化モデル。
+
+    チャネル非依存の連絡先を管理する。
+    1 つの contact に複数の channel（LINE, email 等）を紐付ける。
+
+    Variables:
+        id: UUID 文字列
+        display_name: 表示名
+        metadata_json: メタデータの JSON 文字列
+        created_at: 作成日時
+        updated_at: 更新日時
+
+    Note:
+        - metadata_json のデフォルトは '{}'（空 JSON オブジェクト）
+        - channels リレーションで紐付くチャネル情報を取得可能
+    """
+
+    __tablename__ = "contacts"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow, onupdate=_utcnow
+    )
+
+    # リレーション
+    channels: Mapped[list["ContactChannelModel"]] = relationship(
+        back_populates="contact"
+    )
+
+
+class ContactChannelModel(Base):
+    """連絡先チャネルの永続化モデル。
+
+    連絡先に紐付くチャネル別の外部 ID を管理する。
+    (channel_type, external_id) の組み合わせで一意性を担保する。
+
+    Variables:
+        id: UUID 文字列
+        contact_id: 所属する連絡先の ID（FK → contacts）
+        channel_type: チャネル種別（line, email 等）
+        external_id: チャネル側の外部 ID
+        created_at: 作成日時
+
+    Note:
+        - (channel_type, external_id) に UNIQUE 制約を設定する
+        - contact_id にインデックスを作成する
+    """
+
+    __tablename__ = "contact_channels"
+    __table_args__ = (
+        UniqueConstraint(
+            "channel_type",
+            "external_id",
+            name="uq_contact_channel_type_external_id",
+        ),
+        Index("ix_contact_channels_contact_id", "contact_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    contact_id: Mapped[str] = mapped_column(
+        String, ForeignKey("contacts.id"), nullable=False
+    )
+    channel_type: Mapped[str] = mapped_column(String, nullable=False)
+    external_id: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=_utcnow
+    )
+
+    # リレーション
+    contact: Mapped["ContactModel"] = relationship(back_populates="channels")
