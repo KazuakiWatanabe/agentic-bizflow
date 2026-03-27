@@ -226,7 +226,7 @@ LINE_CONNECTOR_MODE=live  # or db (default) or mock
   dry-run / 承認 / 冪等性 / 監査ログ / Scheduler
 
 将来の展開:
-  同じ基盤で Email / おみせアプリ等の集客チャネルにも展開可能
+  同じ基盤で Email / 店舗向け集客アプリ等の集客チャネルにも展開可能
 ```
 
 ### 5.2 デモ動画

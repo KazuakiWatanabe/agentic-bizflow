@@ -37,7 +37,7 @@ Phase 5 までで基盤の骨格は揃った。次の論点は:
   LINE 運用を自然文から安全に回せる製品
 
 内部設計の方針:
-  類似の集客アプリ（GMO おみせアプリ等）へ差し替え可能な実行基盤
+  類似の集客アプリへ差し替え可能な実行基盤
 ```
 
 この二層構えにより:
@@ -58,7 +58,7 @@ Step 3: 拡張性を見せる
   「同じ plan に LINE + Email を混在できる」
 
 Step 4: 展開先を見せる
-  「GMO おみせアプリのような集客アプリにも広げられる」
+  「店舗向け集客アプリにも広げられる」
 ```
 
 ---
@@ -157,7 +157,7 @@ ExecutionPlanner は共通 kind を生成し、WorkloadRunner が domain_configs
 
 - capability 定義（supports_campaign / supports_label / supports_journey / supports_followup）
 - 同じ自然文でも利用可能なアクションだけに plan を自動調整できる
-- 第 2 チャネル（GMO おみせアプリ等）用の PoC adapter を 1 本実装
+- 第 2 チャネル（店舗向け集客アプリ等）用の PoC adapter を 1 本実装
 - 新チャネル追加手順が文書化されている
 
 ### capability 定義
