@@ -1,6 +1,6 @@
 # Agentic BizFlow — ER 図
 
-> 本ドキュメントは全 20 テーブルの ER 図（Mermaid 形式）です。
+> 本ドキュメントは全 22 テーブルの ER 図（Mermaid 形式）です。
 
 ---
 
