@@ -264,17 +264,20 @@ sequenceDiagram
 
 ### API エンドポイント一覧
 
-| エンドポイント | メソッド | 処理 |
-|---|---|---|
-| `/api/convert` | POST | 自然文 → BusinessDefinition |
-| `/api/plan` | POST | BusinessDefinition → ExecutionPlan（DB 保存） |
-| `/api/dry-run` | POST | 副作用なしのプレビュー |
-| `/api/execute` | POST | DB Connector による本実行（結果を DB 保存） |
-| `/api/plans` | GET | 保存済み plan 一覧 |
-| `/api/plans/{plan_id}` | GET | plan 詳細 |
-| `/api/executions` | GET | 実行履歴一覧 |
-| `/api/executions/{execution_id}` | GET | 実行詳細（step_results 含む） |
-| `/health` | GET | ヘルスチェック |
+全エンドポイントの最新一覧は README.md §10 を参照。主要なものを以下に抜粋。
+
+| エンドポイント | メソッド | 処理 | Phase |
+|---|---|---|---|
+| `/api/convert` | POST | 自然文 → BusinessDefinition | 1 |
+| `/api/plan` | POST | BusinessDefinition → ExecutionPlan（DB 保存） | 2.5 |
+| `/api/dry-run` | POST | 副作用なしのプレビュー | 2.5 |
+| `/api/execute` | POST | 本実行（結果を DB 保存） | 2.5 |
+| `/api/plans`, `/api/executions` | GET | 実行計画・履歴照会 | 3 |
+| `/api/approvals` | GET/POST | 承認ワークフロー | 4 |
+| `/api/domains`, `/api/workload-kinds` | GET | ドメイン・kind 管理 | 5 |
+| `/api/workloads/summary`, `/api/workers/status` | GET | Workload / Worker 状態 | 6 |
+| `/api/marketing/kinds`, `/api/marketing/contacts` | GET/POST | 共通 kind・Contact 管理 | 7 |
+| `/health` | GET | ヘルスチェック | 1 |
 
 ### DB テーブル構成
 
@@ -306,7 +309,7 @@ backend/
     db/                        # DB 基盤（新規）
       base.py                  # DeclarativeBase
       session.py               # engine / SessionLocal / get_db
-      models.py                # 全 ORM モデル（13 テーブル）
+      models.py                # 全 ORM モデル（22 テーブル）
       repositories/            # ドメインごとの CRUD
         execution_repo.py      # plan / result の CRUD
         tag_repo.py            # タグ CRUD
@@ -331,10 +334,9 @@ backend/
 - IDトークンの署名検証は未実装（デモ優先）
 - Role推定はヒューリスティック。業務別ルール拡張が必要
 - エンティティ抽出（org/date/amount）を今後拡張可能
-- Cron による配信消化（broadcasts → sent、scenario step 進行）— Phase 4
-- 本番 LINE API connector の実装 — Phase 4
-- 承認ワークフローの永続化 — Phase 4
-- 非同期ジョブキュー対応（Cloud Tasks / Pub/Sub）— Phase 4
+- Cloud Scheduler + Cloud Run Jobs への移行
+- POS / CRM / ERP ドメインの connector 追加
+- マルチテナント認証
 
 ## License
 

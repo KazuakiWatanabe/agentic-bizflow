@@ -1,6 +1,6 @@
 # Agentic BizFlow — ER 図
 
-> 本ドキュメントは全 20 テーブルの ER 図（Mermaid 形式）です。
+> 本ドキュメントは全 22 テーブルの ER 図（Mermaid 形式）です。
 
 ---
 
@@ -29,6 +29,8 @@ erDiagram
 
     reminder_enrollments ||--o{ reminder_deliveries : "1:N"
     reminder_steps ||--o{ reminder_deliveries : "1:N"
+
+    contacts ||--o{ contact_channels : "1:N"
 
     execution_plans {
         TEXT id PK
@@ -110,7 +112,7 @@ erDiagram
 
     tag_assignments {
         TEXT target_id PK
-        TEXT tag_id PK-FK
+        TEXT tag_id FK "PK"
         DATETIME assigned_at
     }
 
@@ -236,6 +238,22 @@ erDiagram
         DATETIME created_at
         DATETIME updated_at
     }
+
+    contacts {
+        TEXT id PK
+        TEXT display_name
+        TEXT metadata_json
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    contact_channels {
+        TEXT id PK
+        TEXT contact_id FK
+        TEXT channel_type "UQ(type,ext_id)"
+        TEXT external_id
+        DATETIME created_at
+    }
 ```
 
 ---
@@ -249,3 +267,4 @@ erDiagram
 | **実行基盤** | approval_requests, processed_idempotency_keys, execution_audit_logs, worker_task_logs | Phase 4 |
 | **ドメイン管理** | domain_configs | Phase 5 |
 | **Email ドメイン** | email_broadcasts, email_templates | Phase 5 |
+| **連絡先管理** | contacts, contact_channels | Phase 7 |

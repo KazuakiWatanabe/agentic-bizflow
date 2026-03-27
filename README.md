@@ -154,15 +154,22 @@ Cloud Run と Vertex AI（Gemini）を用いて、企業業務への適用を前
 | `/api/approvals/{id}/reject` | POST | 却下 |
 | `/api/domains` | GET | ドメイン一覧 |
 | `/api/domains/{domain}` | GET | ドメイン詳細 |
+| `/api/domains/{domain}/config` | PUT | ドメイン設定更新 |
+| `/api/domains/{domain}/enable` | POST | ドメイン有効化 |
+| `/api/domains/{domain}/disable` | POST | ドメイン無効化 |
 | `/api/workload-kinds` | GET | 全 workload kind 一覧 |
 | `/api/workloads/summary` | GET | Workload 統合サマリー |
 | `/api/workloads/scenarios` | GET | シナリオ状態 |
 | `/api/workloads/broadcasts` | GET | 配信ステータス別カウント |
 | `/api/workloads/reminders` | GET | リマインダー状態 |
 | `/api/workers/status` | GET | Worker 最終実行状態 |
+| `/api/marketing/kinds` | GET | 共通 kind 一覧 + 解決先ドメイン |
+| `/api/marketing/contacts` | GET | Contact 一覧 |
+| `/api/marketing/contacts/{id}` | GET | Contact 詳細 + channels |
+| `/api/marketing/contacts` | POST | Contact 作成 |
 | `/health` | GET | ヘルスチェック |
 
-## 11. DB テーブル一覧（20 テーブル）
+## 11. DB テーブル一覧（22 テーブル）
 
 | 分類 | テーブル |
 |---|---|
@@ -171,6 +178,7 @@ Cloud Run と Vertex AI（Gemini）を用いて、企業業務への適用を前
 | **実行基盤** | approval_requests, processed_idempotency_keys, execution_audit_logs, worker_task_logs |
 | **ドメイン管理** | domain_configs |
 | **Email ドメイン** | email_broadcasts, email_templates |
+| **連絡先管理** | contacts, contact_channels |
 
 詳細は [`docs/table-spec.md`](docs/table-spec.md)、ER 図は [`docs/er-diagram.md`](docs/er-diagram.md) を参照。
 
